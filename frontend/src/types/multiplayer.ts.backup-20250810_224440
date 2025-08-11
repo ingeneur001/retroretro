@@ -1,0 +1,72 @@
+// frontend/src/types/multiplayer.ts
+
+export interface GameUser {
+  id: string;
+  displayName: string;
+  username: string;
+  isOnline: boolean;
+  avatar?: string;
+}
+
+export interface GameSession {
+  id: string;
+  gameType: string;
+  hostUser: GameUser;
+  players: GameUser[];
+  maxPlayers: number;
+  status: 'waiting' | 'playing' | 'finished';
+  createdAt: string;
+  gameConfig?: {
+    difficulty?: string;
+    gameMode?: string;
+    timeLimit?: number;
+  };
+}
+
+export interface ChatMessage {
+  id: string;
+  type: 'user' | 'system';
+  message: string;
+  user?: GameUser;
+  timestamp: number;
+}
+
+export interface GameInvitation {
+  id: string;
+  from: GameUser;
+  to: GameUser;
+  gameType: string;
+  sessionId?: string;
+  status: 'pending' | 'accepted' | 'declined' | 'expired';
+  createdAt: string;
+}
+
+export interface MultiplayerGameState {
+  sessionId: string;
+  gameType: string;
+  players: GameUser[];
+  spectators: GameUser[];
+  currentPlayer?: string;
+  gameData?: any;
+  status: 'waiting' | 'playing' | 'paused' | 'finished';
+  winner?: GameUser;
+}
+
+export interface SocketEvents {
+  'join-session': (sessionId: string) => void;
+  'leave-session': (sessionId: string) => void;
+  'create-session': (gameType: string, config?: any) => void;
+  'send-chat-message': (message: string) => void;
+  'game-action': (action: any) => void;
+  'invite-player': (playerId: string, gameType: string) => void;
+  'session-created': (session: GameSession) => void;
+  'session-joined': (session: GameSession) => void;
+  'session-left': (sessionId: string) => void;
+  'session-updated': (session: GameSession) => void;
+  'player-joined': (player: GameUser, session: GameSession) => void;
+  'player-left': (playerId: string, session: GameSession) => void;
+  'chat-message': (message: ChatMessage) => void;
+  'game-state-update': (gameState: MultiplayerGameState) => void;
+  'game-invitation': (invitation: GameInvitation) => void;
+  'sessions-list': (sessions: GameSession[]) => void;
+}

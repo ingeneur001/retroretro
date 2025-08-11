@@ -1,0 +1,525 @@
+// 🗄️ DATABASE MANAGERS
+// backend/src/database/managers.js
+// Erweitert deine bestehende /src/database/ Struktur
+// GANZ AM ANFANG von managers.js:
+require('dotenv').config();
+
+const bcrypt = require('bcrypt');
+
+// Import deine bestehende connection
+let pool, redisClient;
+try {
+  const connection = require('./connection');
+  // Falls du pool/client exports hast
+  pool = connection.pool || connection.getPool?.() || null;
+  redisClient = connection.redisClient || connection.getRedis?.() || null;
+} catch (err) {
+  console.warn('⚠️  Using fallback connection method');
+}
+
+// Fallback: Direct PostgreSQL connection if needed
+if (!pool) {
+  const { Pool } = require('pg');
+  pool = new Pool({
+    user: process.env.DB_USER || 'retro_user',
+    host: process.env.DB_HOST || 'localhost',
+    database: process.env.DB_NAME || 'retro_gaming',
+    password: process.env.DB_PASSWORD || 'retro_password',
+    port: process.env.DB_PORT || 5432,
+    max: 20,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 2000,
+  });
+}
+
+// ================================
+// USER MANAGER CLASS
+// ================================
+
+class UserManager {
+    constructor() {
+        this.pool = pool;
+        this.redis = redisClient;
+    }
+
+    // Get all active games from database
+    async getGames() {
+        try {
+            const query = `
+                SELECT id, slug, title, description, category, difficulty_level,
+                       max_players, is_multiplayer, required_membership, thumbnail_url
+                FROM games 
+                WHERE is_active = true 
+                ORDER BY category, title
+            `;
+            
+            const result = await this.pool.query(query);
+            return result.rows;
+        } catch (error) {
+            console.error('❌ Error fetching games:', error);
+            // Return empty array instead of throwing
+            return [];
+        }
+    }
+
+    // Get game by slug
+    async getGameBySlug(slug) {
+        try {
+            const query = `
+                SELECT id, slug, title, description, category, max_players, is_multiplayer
+                FROM games 
+                WHERE slug = $1 AND is_active = true
+            `;
+            
+            const result = await this.pool.query(query, [slug]);
+            return result.rows[0] || null;
+        } catch (error) {
+            console.error('❌ Error fetching game by slug:', error);
+            return null;
+        }
+    }
+
+    // Create new user with secure password hashing
+    async createUser({ username, email, password, displayName }) {
+        try {
+            // Hash password securely
+            const saltRounds = 12;
+            const passwordHash = await bcrypt.hash(password, saltRounds);
+            
+            const query = `
+                INSERT INTO users (username, email, password_hash, display_name)
+                VALUES ($1, $2, $3, $4)
+                RETURNING id, username, email, display_name, membership_tier, created_at
+            `;
+            
+            const result = await this.pool.query(query, [
+                username, 
+                email, 
+                passwordHash, 
+                displayName || username
+            ]);
+            
+            return result.rows[0];
+        } catch (error) {
+            if (error.code === '23505') { // PostgreSQL unique violation
+                throw new Error('Username or email already exists');
+            }
+            console.error('❌ Error creating user:', error);
+            throw new Error('Failed to create user account');
+        }
+    }
+
+    // Authenticate user with password verification
+    async authenticateUser(username, password) {
+        try {
+            const query = `
+                SELECT id, username, email, password_hash, display_name, membership_tier
+                FROM users 
+                WHERE (username = $1 OR email = $1) AND is_active = true
+            `;
+            
+            const result = await this.pool.query(query, [username]);
+            const user = result.rows[0];
+            
+            if (!user) {
+                return null; // User not found
+            }
+
+            // Verify password
+            const isValidPassword = await bcrypt.compare(password, user.password_hash);
+            if (!isValidPassword) {
+                return null; // Invalid password
+            }
+
+            // Return user data without password hash
+            const { password_hash, ...userWithoutPassword } = user;
+            return userWithoutPassword;
+        } catch (error) {
+            console.error('❌ Authentication error:', error);
+            return null;
+        }
+    }
+
+    // Get user by username or email
+    async getUser(identifier) {
+        try {
+            const query = `
+                SELECT id, username, email, display_name, membership_tier, 
+                       last_active, created_at, email_verified
+                FROM users 
+                WHERE (username = $1 OR email = $1) AND is_active = true
+            `;
+            
+            const result = await this.pool.query(query, [identifier]);
+            return result.rows[0] || null;
+        } catch (error) {
+            console.error('❌ Error fetching user:', error);
+            return null;
+        }
+    }
+
+    // Update user last active timestamp
+    async updateLastActive(userId) {
+        try {
+            const query = 'UPDATE users SET last_active = CURRENT_TIMESTAMP WHERE id = $1';
+            await this.pool.query(query, [userId]);
+            return true;
+        } catch (error) {
+            console.error('❌ Error updating last active:', error);
+            // Don't throw - this is not critical
+            return false;
+        }
+    }
+
+    // Get leaderboard data
+    async getLeaderboard(gameSlug = null, limit = 10) {
+        try {
+            let query;
+            let params = [limit];
+            
+            if (gameSlug) {
+                query = `
+                    SELECT pb.best_score, pb.best_level, pb.total_games_played, pb.last_played,
+                           u.display_name, u.username, g.title as game_title,
+                           RANK() OVER (ORDER BY pb.best_score DESC) as rank
+                    FROM user_personal_bests pb
+                    JOIN users u ON pb.user_id = u.id AND u.is_active = true
+                    JOIN games g ON pb.game_id = g.id AND g.is_active = true
+                    WHERE g.slug = $2
+                    ORDER BY pb.best_score DESC
+                    LIMIT $1
+                `;
+                params = [limit, gameSlug];
+            } else {
+                query = `
+                    SELECT pb.best_score, pb.best_level, pb.total_games_played, pb.last_played,
+                           u.display_name, u.username, g.title as game_title, g.slug as game_slug,
+                           RANK() OVER (PARTITION BY g.id ORDER BY pb.best_score DESC) as rank
+                    FROM user_personal_bests pb
+                    JOIN users u ON pb.user_id = u.id AND u.is_active = true
+                    JOIN games g ON pb.game_id = g.id AND g.is_active = true
+                    ORDER BY g.title, pb.best_score DESC
+                    LIMIT $1
+                `;
+            }
+            
+            const result = await this.pool.query(query, params);
+            return result.rows;
+        } catch (error) {
+            console.error('❌ Error fetching leaderboard:', error);
+            return [];
+        }
+    }
+
+    // Save user score with transaction safety
+    async saveScore({ userId, sessionId, score, levelReached, timePlayedSeconds, completed }) {
+        const client = await this.pool.connect();
+        
+        try {
+            await client.query('BEGIN');
+            
+            // Insert or update user score
+            await client.query(`
+                INSERT INTO user_scores (user_id, session_id, score, level_reached, time_played, completed)
+                VALUES ($1, $2, $3, $4, $5, $6)
+                ON CONFLICT (user_id, session_id) 
+                DO UPDATE SET 
+                    score = GREATEST(user_scores.score, EXCLUDED.score),
+                    level_reached = GREATEST(user_scores.level_reached, EXCLUDED.level_reached),
+                    time_played = user_scores.time_played + EXCLUDED.time_played,
+                    completed = user_scores.completed OR EXCLUDED.completed,
+                    achieved_at = CURRENT_TIMESTAMP
+            `, [userId, sessionId, score, levelReached || 1, timePlayedSeconds || 0, completed || false]);
+
+            // Update personal best record
+            const gameResult = await client.query(`
+                SELECT g.id FROM games g 
+                JOIN game_sessions gs ON g.id = gs.game_id 
+                WHERE gs.id = $1
+            `, [sessionId]);
+
+            if (gameResult.rows[0]) {
+                const gameId = gameResult.rows[0].id;
+                
+                await client.query(`
+                    INSERT INTO user_personal_bests (user_id, game_id, best_score, best_level, total_games_played, last_played)
+                    VALUES ($1, $2, $3, $4, 1, CURRENT_TIMESTAMP)
+                    ON CONFLICT (user_id, game_id)
+                    DO UPDATE SET
+                        best_score = GREATEST(user_personal_bests.best_score, EXCLUDED.best_score),
+                        best_level = GREATEST(user_personal_bests.best_level, EXCLUDED.best_level),
+                        total_games_played = user_personal_bests.total_games_played + 1,
+                        last_played = CURRENT_TIMESTAMP
+                `, [userId, gameId, score, levelReached || 1]);
+            }
+
+            await client.query('COMMIT');
+            return true;
+        } catch (error) {
+            await client.query('ROLLBACK');
+            console.error('❌ Error saving score:', error);
+            throw new Error('Failed to save score');
+        } finally {
+            client.release();
+        }
+    }
+
+    // Get user statistics
+    async getUserStats(userId) {
+        try {
+            const query = `
+                SELECT 
+                    u.username, u.display_name, u.membership_tier, u.created_at,
+                    COUNT(DISTINCT us.game_id) as games_played,
+                    COUNT(us.id) as total_sessions,
+                    COALESCE(SUM(us.time_played), 0) as total_time_seconds,
+                    COALESCE(AVG(us.score), 0) as avg_score,
+                    COALESCE(MAX(us.score), 0) as best_score,
+                    COUNT(ua.id) as achievements_unlocked
+                FROM users u
+                LEFT JOIN user_scores us ON u.id = us.user_id
+                LEFT JOIN user_achievements ua ON u.id = ua.user_id
+                WHERE u.id = $1 AND u.is_active = true
+                GROUP BY u.id, u.username, u.display_name, u.membership_tier, u.created_at
+            `;
+            
+            const result = await this.pool.query(query, [userId]);
+            return result.rows[0] || null;
+        } catch (error) {
+            console.error('❌ Error fetching user stats:', error);
+            return null;
+        }
+    }
+}
+
+// ================================
+// GAME SESSION MANAGER CLASS
+// ================================
+
+class GameSessionManager {
+    constructor() {
+        this.pool = pool;
+        this.redis = redisClient;
+    }
+
+    // Create new game session
+    async createSession(gameId, hostUserId, settings = {}) {
+        try {
+            const query = `
+                INSERT INTO game_sessions (game_id, host_user_id, settings, session_status)
+                VALUES ($1, $2, $3, 'waiting')
+                RETURNING id, session_name, max_players, created_at
+            `;
+            
+            const result = await this.pool.query(query, [
+                gameId, 
+                hostUserId, 
+                JSON.stringify(settings)
+            ]);
+            
+            return result.rows[0];
+        } catch (error) {
+            console.error('❌ Error creating session:', error);
+            throw new Error('Failed to create game session');
+        }
+    }
+
+    // Join existing game session
+    async joinSession(sessionId, userId, socketId) {
+        const client = await this.pool.connect();
+        
+        try {
+            await client.query('BEGIN');
+            
+            // Check session availability
+            const sessionCheck = await client.query(`
+                SELECT current_players, max_players, session_status 
+                FROM game_sessions 
+                WHERE id = $1
+            `, [sessionId]);
+            
+            if (!sessionCheck.rows[0]) {
+                throw new Error('Session not found');
+            }
+            
+            const { current_players, max_players, session_status } = sessionCheck.rows[0];
+            
+            if (session_status !== 'waiting' && session_status !== 'active') {
+                throw new Error('Session is not available');
+            }
+            
+            if (current_players >= max_players) {
+                throw new Error('Session is full');
+            }
+
+            // Check if user already in session (reconnection)
+            const existingPlayer = await client.query(`
+                SELECT player_number FROM session_players 
+                WHERE session_id = $1 AND user_id = $2 AND is_active = true
+            `, [sessionId, userId]);
+
+            if (existingPlayer.rows[0]) {
+                // Update socket ID for reconnection
+                await client.query(`
+                    UPDATE session_players 
+                    SET socket_id = $3, joined_at = CURRENT_TIMESTAMP 
+                    WHERE session_id = $1 AND user_id = $2
+                `, [sessionId, userId, socketId]);
+                
+                await client.query('COMMIT');
+                return { 
+                    playerNumber: existingPlayer.rows[0].player_number, 
+                    reconnected: true 
+                };
+            }
+
+            // Add new player
+            const playerNumber = current_players + 1;
+            await client.query(`
+                INSERT INTO session_players (session_id, user_id, socket_id, player_number) 
+                VALUES ($1, $2, $3, $4)
+            `, [sessionId, userId, socketId, playerNumber]);
+
+            // Update session player count
+            await client.query(`
+                UPDATE game_sessions 
+                SET current_players = current_players + 1 
+                WHERE id = $1
+            `, [sessionId]);
+
+            await client.query('COMMIT');
+            return { playerNumber, reconnected: false };
+            
+        } catch (error) {
+            await client.query('ROLLBACK');
+            console.error('❌ Error joining session:', error);
+            throw error;
+        } finally {
+            client.release();
+        }
+    }
+
+    // Update game state for session
+    async updateGameState(sessionId, gameState) {
+        try {
+            const query = `
+                UPDATE game_sessions 
+                SET game_state = $2, updated_at = CURRENT_TIMESTAMP 
+                WHERE id = $1
+            `;
+            
+            await this.pool.query(query, [sessionId, JSON.stringify(gameState)]);
+            
+            // Cache in Redis if available
+            if (this.redis) {
+                try {
+                    await this.redis.setEx(
+                        `session:${sessionId}:state`, 
+                        1800, // 30 minutes
+                        JSON.stringify(gameState)
+                    );
+                } catch (redisError) {
+                    console.warn('⚠️  Redis cache update failed:', redisError.message);
+                }
+            }
+            
+            return true;
+        } catch (error) {
+            console.error('❌ Error updating game state:', error);
+            return false;
+        }
+    }
+
+    // Get active sessions
+    async getActiveSessions(gameSlug = null) {
+        try {
+            let query;
+            let params = [];
+            
+            if (gameSlug) {
+                query = `
+                    SELECT gs.id, gs.session_name, g.title as game_title, g.slug as game_slug,
+                           u.display_name as host_name, gs.current_players, gs.max_players,
+                           gs.session_status, gs.created_at
+                    FROM game_sessions gs
+                    JOIN games g ON gs.game_id = g.id AND g.is_active = true
+                    JOIN users u ON gs.host_user_id = u.id AND u.is_active = true
+                    WHERE gs.session_status IN ('waiting', 'active') AND g.slug = $1
+                    ORDER BY gs.created_at DESC
+                `;
+                params = [gameSlug];
+            } else {
+                query = `
+                    SELECT gs.id, gs.session_name, g.title as game_title, g.slug as game_slug,
+                           u.display_name as host_name, gs.current_players, gs.max_players,
+                           gs.session_status, gs.created_at
+                    FROM game_sessions gs
+                    JOIN games g ON gs.game_id = g.id AND g.is_active = true
+                    JOIN users u ON gs.host_user_id = u.id AND u.is_active = true
+                    WHERE gs.session_status IN ('waiting', 'active')
+                    ORDER BY gs.created_at DESC
+                `;
+            }
+            
+            const result = await this.pool.query(query, params);
+            return result.rows;
+        } catch (error) {
+            console.error('❌ Error fetching active sessions:', error);
+            return [];
+        }
+    }
+
+    // Handle player disconnect
+    async handlePlayerDisconnect(sessionId, userId) {
+        const client = await this.pool.connect();
+        
+        try {
+            await client.query('BEGIN');
+            
+            // Mark player as left
+            await client.query(`
+                UPDATE session_players 
+                SET left_at = CURRENT_TIMESTAMP, is_active = false 
+                WHERE session_id = $1 AND user_id = $2 AND is_active = true
+            `, [sessionId, userId]);
+
+            // Update session player count
+            await client.query(`
+                UPDATE game_sessions 
+                SET current_players = current_players - 1 
+                WHERE id = $1 AND current_players > 0
+            `, [sessionId]);
+
+            // Check if session should be closed (no active players)
+            const activePlayersResult = await client.query(`
+                SELECT COUNT(*) as active_count 
+                FROM session_players 
+                WHERE session_id = $1 AND is_active = true
+            `, [sessionId]);
+
+            const activeCount = parseInt(activePlayersResult.rows[0].active_count);
+            if (activeCount === 0) {
+                await client.query(`
+                    UPDATE game_sessions 
+                    SET session_status = 'finished', ended_at = CURRENT_TIMESTAMP 
+                    WHERE id = $1
+                `, [sessionId]);
+            }
+
+            await client.query('COMMIT');
+            return true;
+        } catch (error) {
+            await client.query('ROLLBACK');
+            console.error('❌ Error handling player disconnect:', error);
+            return false;
+        } finally {
+            client.release();
+        }
+    }
+}
+
+// Export the managers
+module.exports = {
+    UserManager,
+    GameSessionManager
+};

@@ -1,0 +1,208 @@
+// ===================================================================
+// MULTIPLAYER TYPES - Enhanced Version
+// frontend/src/types/multiplayer.ts
+// ===================================================================
+
+// User Interfaces
+export interface GameUser {
+  id: string;
+  displayName: string;
+  username: string;
+  email?: string;
+  isOnline: boolean;
+  avatar?: string;
+  // Multiplayer-specific fields
+  socketId?: string;
+  playerNumber?: number;
+  isHost?: boolean;
+  isReady?: boolean;
+  score?: number;
+  wins?: number;
+  losses?: number;
+}
+
+export interface Player extends GameUser {
+  position: { x: number; y: number };
+  color: string;
+  isActive: boolean;
+  lastActivity: Date;
+}
+
+// Room Interfaces
+export interface GameRoom {
+  id: string;
+  name: string;
+  gameType: string;
+  isPrivate: boolean;
+  password?: string;
+  maxPlayers: number;
+  currentPlayers: number;
+  players: Player[];
+  host: GameUser;
+  status: 'waiting' | 'starting' | 'playing' | 'paused' | 'finished';
+  settings: GameSettings;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface GameSettings {
+  gameType: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+  gameMode: 'competitive' | 'cooperative' | 'practice';
+  timeLimit?: number;
+  scoreLimit?: number;
+  allowSpectators: boolean;
+  autoStart: boolean;
+  [key: string]: any; // Game-specific settings
+}
+
+// Game State Interfaces
+export interface GameState {
+  roomId: string;
+  status: 'waiting' | 'starting' | 'playing' | 'paused' | 'finished';
+  currentPlayer?: string;
+  turn: number;
+  score: { [playerId: string]: number };
+  gameData: any; // Game-specific data
+  startTime?: Date;
+  endTime?: Date;
+}
+
+export interface GameAction {
+  type: string;
+  playerId: string;
+  data: any;
+  timestamp: Date;
+}
+
+// Message Interfaces
+export interface ChatMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  message: string;
+  timestamp: Date;
+  type: 'text' | 'system' | 'emoji';
+}
+
+export interface SystemMessage {
+  type: 'player_joined' | 'player_left' | 'game_started' | 'game_ended' | 'error';
+  message: string;
+  timestamp: Date;
+  data?: any;
+}
+
+// Socket Event Interfaces
+export interface SocketError {
+  code: string;
+  message: string;
+  details?: any;
+}
+
+export interface ConnectionState {
+  status: 'disconnected' | 'connecting' | 'connected' | 'error';
+  error?: SocketError;
+  reconnectAttempts: number;
+  lastConnected?: Date;
+}
+
+// Hook Interfaces
+export interface UseMultiplayerSocket {
+  // Connection
+  connectionState: ConnectionState;
+  connect: () => void;
+  disconnect: () => void;
+  
+  // Room Management
+  currentRoom: GameRoom | null;
+  createRoom: (settings: Partial<GameSettings>) => Promise<GameRoom>;
+  joinRoom: (roomId: string, password?: string) => Promise<boolean>;
+  leaveRoom: () => void;
+  
+  // Game Actions
+  gameState: GameState | null;
+  sendGameAction: (action: Omit<GameAction, 'playerId' | 'timestamp'>) => void;
+  
+  // Chat
+  messages: ChatMessage[];
+  sendMessage: (message: string) => void;
+  
+  // Player Management
+  updatePlayerReady: (ready: boolean) => void;
+  kickPlayer: (playerId: string) => void; // Host only
+}
+
+// API Response Interfaces
+export interface RoomListResponse {
+  rooms: GameRoom[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface CreateRoomRequest {
+  name: string;
+  gameType: string;
+  isPrivate: boolean;
+  password?: string;
+  maxPlayers: number;
+  settings: Partial<GameSettings>;
+}
+
+export interface JoinRoomRequest {
+  roomId: string;
+  password?: string;
+}
+
+
+// Legacy Compatibility Interface (für bestehende Komponenten)
+export interface GameSession {
+  id: string;
+  name: string;
+  gameType: string;
+  isPrivate: boolean;
+  password?: string;
+  maxPlayers: number;
+  currentPlayers: number;
+  players: GameUser[];
+  host: GameUser;
+  status: 'waiting' | 'starting' | 'playing' | 'paused' | 'finished';
+  createdAt: Date;
+  updatedAt: Date;
+  // Alias für GameRoom - Rückwärtskompatibilität
+}
+
+// Type Alias für Legacy Support
+export type GameSession = GameRoom;
+
+// Type Guards
+export const isGameUser = (obj: any): obj is GameUser => {
+  return obj && typeof obj.id === 'string' && typeof obj.displayName === 'string';
+};
+
+export const isGameRoom = (obj: any): obj is GameRoom => {
+  return obj && typeof obj.id === 'string' && typeof obj.name === 'string';
+};
+
+// Enums
+export enum GameType {
+  SNAKE = 'snake',
+  TETRIS = 'tetris', 
+  MEMORY = 'memory',
+  PONG = 'pong'
+}
+
+export enum RoomStatus {
+  WAITING = 'waiting',
+  STARTING = 'starting', 
+  PLAYING = 'playing',
+  PAUSED = 'paused',
+  FINISHED = 'finished'
+}
+
+export enum ConnectionStatus {
+  DISCONNECTED = 'disconnected',
+  CONNECTING = 'connecting',
+  CONNECTED = 'connected',
+  ERROR = 'error'
+}

@@ -1,0 +1,822 @@
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import styled, { keyframes } from 'styled-components';
+import { useGameIntegration } from '../../interfaces/user/UserManager';
+
+// Animationen
+const pulse = keyframes`
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+`;
+
+const gameGlow = keyframes`
+  0%, 100% { box-shadow: 0 0 10px #00ffff; }
+  50% { box-shadow: 0 0 20px #00ffff, 0 0 30px #00ffff; }
+`;
+
+const scoreGlow = keyframes`
+  0%, 100% { text-shadow: 0 0 10px #ffff00; }
+  50% { text-shadow: 0 0 20px #ffff00, 0 0 30px #ffff00; }
+`;
+
+// Styled Components
+const PongGameContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 900px;
+  margin: 2rem auto;
+  padding: 20px;
+  background: linear-gradient(145deg, #1a1a2e 0%, #16213e 100%);
+  border: 2px solid #00ffff;
+  border-radius: 15px;
+  animation: ${gameGlow} 3s ease-in-out infinite;
+`;
+
+const GameTitle = styled.h2`
+  color: #00ffff;
+  margin-bottom: 15px;
+  font-size: 1.8rem;
+  text-align: center;
+  font-weight: 700;
+`;
+
+const GameInfo = styled.div`
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 640px;
+  margin: 20px 0;
+  gap: 20px;
+`;
+
+const ScoreDisplay = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  
+  .player-score {
+    text-align: center;
+    color: #00ffff;
+    
+    h3 {
+      margin: 0 0 10px 0;
+      font-size: 1.2rem;
+      text-transform: uppercase;
+    }
+    
+    .score {
+      font-size: 3rem;
+      font-weight: bold;
+      color: #ffff00;
+      animation: ${scoreGlow} 2s ease-in-out infinite;
+    }
+  }
+  
+  .game-info {
+    text-align: center;
+    color: #00ffff;
+    
+    .level {
+      font-size: 1.1rem;
+      margin: 5px 0;
+    }
+    
+    .speed {
+      font-size: 0.9rem;
+      color: #ff6b9d;
+    }
+  }
+`;
+
+const GameModeSelector = styled.div`
+  display: flex;
+  gap: 15px;
+  margin: 20px 0;
+  
+  label {
+    color: #00ffff;
+    cursor: pointer;
+    padding: 8px 15px;
+    border: 1px solid #00ffff;
+    border-radius: 20px;
+    transition: all 0.3s ease;
+    
+    &:hover {
+      background: rgba(0, 255, 255, 0.1);
+    }
+    
+    input[type="radio"] {
+      margin-right: 8px;
+    }
+    
+    &:has(input:checked) {
+      background: linear-gradient(45deg, #00ffff20, #ff00ff20);
+      border-color: #ff6b9d;
+    }
+  }
+`;
+
+const GameScreen = styled.div<{ isActive: boolean }>`
+  width: 640px;
+  height: 480px;
+  background: ${props => props.isActive ? '#000' : '#111'};
+  border: 3px solid #00ffff;
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const GameCanvas = styled.canvas`
+  width: 100%;
+  height: 100%;
+  background: #000;
+  border-radius: 5px;
+`;
+
+const GameContent = styled.div`
+  color: #00ffff;
+  text-align: center;
+  font-size: 1.2rem;
+  padding: 20px;
+  
+  h3 {
+    color: #ffff00;
+    margin-bottom: 15px;
+    font-size: 1.5rem;
+  }
+  
+  p {
+    margin: 10px 0;
+    line-height: 1.6;
+  }
+`;
+
+const ControlsContainer = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  justify-content: center;
+  margin-bottom: 20px;
+`;
+
+const ControlButton = styled.button<{ variant?: 'primary' | 'secondary' | 'success' }>`
+  background: ${props => 
+    props.variant === 'primary' ? 'linear-gradient(45deg, #ff6b35, #f7931e)' :
+    props.variant === 'success' ? 'linear-gradient(45deg, #00ff00, #00cc00)' :
+    'linear-gradient(45deg, #00ffff, #0099cc)'};
+  border: none;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 25px;
+  font-family: 'Orbitron', monospace;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255, 107, 53, 0.5);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+`;
+
+const DebugPanel = styled.div`
+  background: rgba(255, 0, 0, 0.1);
+  border: 1px solid #ff0000;
+  border-radius: 5px;
+  padding: 10px;
+  margin: 10px 0;
+  color: #ff0000;
+  font-family: 'Courier New', monospace;
+  font-size: 0.8rem;
+`;
+
+const GameOver = styled.div`
+  background: rgba(255, 107, 157, 0.1);
+  border: 2px solid #ff6b9d;
+  border-radius: 10px;
+  padding: 20px;
+  margin-top: 20px;
+  text-align: center;
+  animation: ${pulse} 2s infinite;
+  
+  h3 {
+    color: #ff6b9d;
+    margin-bottom: 15px;
+    font-size: 1.8rem;
+  }
+  
+  p {
+    color: #00ffff;
+    margin: 10px 0;
+    font-size: 1.2rem;
+  }
+`;
+
+// Interfaces
+interface Paddle {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  speed: number;
+  score: number;
+}
+
+interface Ball {
+  x: number;
+  y: number;
+  radius: number;
+  speedX: number;
+  speedY: number;
+  maxSpeed: number;
+}
+
+interface PongGameState {
+  leftPaddle: Paddle;
+  rightPaddle: Paddle;
+  ball: Ball;
+  gameRunning: boolean;
+  level: number;
+  gameMode: 'single' | 'multi';
+}
+
+// Konstanten
+const CANVAS_WIDTH = 640;
+const CANVAS_HEIGHT = 480;
+const PADDLE_WIDTH = 15;
+const PADDLE_HEIGHT = 80;
+const PADDLE_SPEED = 6;
+const BALL_RADIUS = 8;
+const INITIAL_BALL_SPEED = 4;
+const MAX_BALL_SPEED = 12;
+const WINNING_SCORE = 11;
+
+// PongGame Component
+const PongGame: React.FC = () => {
+  // User System Integration - GANZ AM ANFANG!
+  const { recordGameResult, isLoggedIn, currentUser } = useGameIntegration();
+  
+  // Game States
+  const [gameMode, setGameMode] = useState<'single' | 'multi'>('single');
+  const [gameStatus, setGameStatus] = useState<'idle' | 'playing' | 'paused' | 'gameover'>('idle');
+  const [debugLogs, setDebugLogs] = useState<string[]>([]);
+  const [keys, setKeys] = useState<Record<string, boolean>>({});
+  const [showHighScore, setShowHighScore] = useState(false);
+  
+  const [pongState, setPongState] = useState<PongGameState>({
+    leftPaddle: {
+      x: 30,
+      y: CANVAS_HEIGHT / 2 - PADDLE_HEIGHT / 2,
+      width: PADDLE_WIDTH,
+      height: PADDLE_HEIGHT,
+      speed: PADDLE_SPEED,
+      score: 0
+    },
+    rightPaddle: {
+      x: CANVAS_WIDTH - 30 - PADDLE_WIDTH,
+      y: CANVAS_HEIGHT / 2 - PADDLE_HEIGHT / 2,
+      width: PADDLE_WIDTH,
+      height: PADDLE_HEIGHT,
+      speed: PADDLE_SPEED,
+      score: 0
+    },
+    ball: {
+      x: CANVAS_WIDTH / 2,
+      y: CANVAS_HEIGHT / 2,
+      radius: BALL_RADIUS,
+      speedX: INITIAL_BALL_SPEED,
+      speedY: INITIAL_BALL_SPEED,
+      maxSpeed: MAX_BALL_SPEED
+    },
+    gameRunning: false,
+    level: 1,
+    gameMode: 'single'
+  });
+  
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const gameLoopRef = useRef<number | undefined>(undefined);
+
+  // Debug-Log hinzufügen
+  const addDebugLog = (message: string) => {
+    const timestamp = new Date().toLocaleTimeString();
+    setDebugLogs(prev => [...prev.slice(-4), `${timestamp}: ${message}`]);
+    console.log(`🏓 ${timestamp}: ${message}`);
+  };
+
+  // Keyboard-Handler
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      setKeys(prev => ({ ...prev, [event.key.toLowerCase()]: true }));
+    };
+
+    const handleKeyUp = (event: KeyboardEvent) => {
+      setKeys(prev => ({ ...prev, [event.key.toLowerCase()]: false }));
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, []);
+
+  // Ball zurücksetzen
+  const resetBall = useCallback((direction: 'left' | 'right' = 'left') => {
+    setPongState(prev => ({
+      ...prev,
+      ball: {
+        ...prev.ball,
+        x: CANVAS_WIDTH / 2,
+        y: CANVAS_HEIGHT / 2,
+        speedX: direction === 'left' ? -INITIAL_BALL_SPEED : INITIAL_BALL_SPEED,
+        speedY: (Math.random() - 0.5) * INITIAL_BALL_SPEED
+      }
+    }));
+  }, []);
+
+  // KI für rechten Paddle
+  const updateAI = useCallback((ball: Ball, rightPaddle: Paddle) => {
+    const paddleCenter = rightPaddle.y + rightPaddle.height / 2;
+    const ballY = ball.y;
+    
+    let targetY = rightPaddle.y;
+    const aiSpeed = Math.min(PADDLE_SPEED * (0.6 + pongState.level * 0.1), PADDLE_SPEED);
+    const prediction = ball.x + ball.speedX * 20;
+    
+    if (prediction > CANVAS_WIDTH / 2) {
+      if (ballY < paddleCenter - 10) {
+        targetY = Math.max(0, rightPaddle.y - aiSpeed);
+      } else if (ballY > paddleCenter + 10) {
+        targetY = Math.min(CANVAS_HEIGHT - rightPaddle.height, rightPaddle.y + aiSpeed);
+      }
+    } else {
+      const centerY = CANVAS_HEIGHT / 2 - rightPaddle.height / 2;
+      if (paddleCenter < centerY - 5) {
+        targetY = rightPaddle.y + aiSpeed * 0.5;
+      } else if (paddleCenter > centerY + 5) {
+        targetY = rightPaddle.y - aiSpeed * 0.5;
+      }
+    }
+    
+    return Math.max(0, Math.min(CANVAS_HEIGHT - rightPaddle.height, targetY));
+  }, [pongState.level]);
+
+  // Kollisionserkennung mit Score Integration
+  const checkCollisions = useCallback((state: PongGameState) => {
+    const { ball, leftPaddle, rightPaddle } = state;
+    let newState = { ...state };
+    
+    // Ball-Wand Kollision
+    if (ball.y - ball.radius <= 0 || ball.y + ball.radius >= CANVAS_HEIGHT) {
+      newState.ball.speedY = -ball.speedY;
+      addDebugLog('🎾 Ball hit wall');
+    }
+    
+    // Ball-Paddle Kollision
+    const ballLeft = ball.x - ball.radius;
+    const ballRight = ball.x + ball.radius;
+    const ballTop = ball.y - ball.radius;
+    const ballBottom = ball.y + ball.radius;
+    
+    // Linker Paddle
+    if (ballLeft <= leftPaddle.x + leftPaddle.width &&
+        ballRight >= leftPaddle.x &&
+        ballTop <= leftPaddle.y + leftPaddle.height &&
+        ballBottom >= leftPaddle.y &&
+        ball.speedX < 0) {
+      
+      const hitPos = (ball.y - (leftPaddle.y + leftPaddle.height / 2)) / (leftPaddle.height / 2);
+      newState.ball.speedX = Math.abs(ball.speedX) * 1.05;
+      newState.ball.speedY = hitPos * ball.maxSpeed * 0.7;
+      newState.ball.speedX = Math.min(newState.ball.speedX, ball.maxSpeed);
+      addDebugLog('🎾 Ball hit left paddle');
+    }
+    
+    // Rechter Paddle
+    if (ballRight >= rightPaddle.x &&
+        ballLeft <= rightPaddle.x + rightPaddle.width &&
+        ballTop <= rightPaddle.y + rightPaddle.height &&
+        ballBottom >= rightPaddle.y &&
+        ball.speedX > 0) {
+      
+      const hitPos = (ball.y - (rightPaddle.y + rightPaddle.height / 2)) / (rightPaddle.height / 2);
+      newState.ball.speedX = -Math.abs(ball.speedX) * 1.05;
+      newState.ball.speedY = hitPos * ball.maxSpeed * 0.7;
+      newState.ball.speedX = Math.max(newState.ball.speedX, -ball.maxSpeed);
+      addDebugLog('🎾 Ball hit right paddle');
+    }
+    
+    // Punkt erzielt
+    if (ball.x < 0) {
+      newState.rightPaddle.score++;
+      addDebugLog(`🎯 Right player scores! ${newState.leftPaddle.score}-${newState.rightPaddle.score}`);
+      setTimeout(() => resetBall('right'), 1000);
+    } else if (ball.x > CANVAS_WIDTH) {
+      newState.leftPaddle.score++;
+      addDebugLog(`🎯 Left player scores! ${newState.leftPaddle.score}-${newState.rightPaddle.score}`);
+      setTimeout(() => resetBall('left'), 1000);
+    }
+    
+    // SPIEL BEENDEN MIT SCORE INTEGRATION!
+    if (newState.leftPaddle.score >= WINNING_SCORE || newState.rightPaddle.score >= WINNING_SCORE) {
+      newState.gameRunning = false;
+      setGameStatus('gameover');
+      
+      // Score recording - NUR wenn Player gewinnt
+      if (isLoggedIn) {
+        const playerWon = newState.leftPaddle.score >= WINNING_SCORE;
+        if (playerWon) {
+          const finalScore = newState.leftPaddle.score;
+          const { newHighScore } = recordGameResult('pong', finalScore);
+          if (newHighScore) {
+            setShowHighScore(true);
+            addDebugLog(`🏆 NEW HIGH SCORE: ${finalScore}!`);
+          }
+        }
+      }
+      
+      const winner = newState.leftPaddle.score >= WINNING_SCORE ? 'Player 1' : 
+                    (gameMode === 'single' ? 'Computer' : 'Player 2');
+      addDebugLog(`🏆 Game Over! Winner: ${winner}`);
+    }
+    
+    return newState;
+  }, [resetBall, gameMode, isLoggedIn, recordGameResult]);
+
+  // Game Update-Logic
+  const updateGame = useCallback(() => {
+    if (!pongState.gameRunning) return;
+    
+    setPongState(prev => {
+      let newState = { ...prev };
+      
+      // Paddle-Bewegung (Player 1)
+      if (keys['w'] || keys['arrowup']) {
+        newState.leftPaddle.y = Math.max(0, prev.leftPaddle.y - prev.leftPaddle.speed);
+      }
+      if (keys['s'] || keys['arrowdown']) {
+        newState.leftPaddle.y = Math.min(CANVAS_HEIGHT - prev.leftPaddle.height, prev.leftPaddle.y + prev.leftPaddle.speed);
+      }
+      
+      // Paddle-Bewegung (Player 2 oder KI)
+      if (gameMode === 'multi') {
+        if (keys['arrowup']) {
+          newState.rightPaddle.y = Math.max(0, prev.rightPaddle.y - prev.rightPaddle.speed);
+        }
+        if (keys['arrowdown']) {
+          newState.rightPaddle.y = Math.min(CANVAS_HEIGHT - prev.rightPaddle.height, prev.rightPaddle.y + prev.rightPaddle.speed);
+        }
+      } else {
+        // KI-Steuerung
+        newState.rightPaddle.y = updateAI(prev.ball, prev.rightPaddle);
+      }
+      
+      // Ball-Bewegung
+      newState.ball.x += prev.ball.speedX;
+      newState.ball.y += prev.ball.speedY;
+      
+      // Kollisionen prüfen
+      newState = checkCollisions(newState);
+      
+      return newState;
+    });
+  }, [keys, gameMode, updateAI, checkCollisions, pongState.gameRunning]);
+
+  // Zeichnen
+  const drawGame = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Canvas leeren
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    
+    // Mittellinie
+    ctx.setLineDash([10, 10]);
+    ctx.strokeStyle = '#00ffff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(CANVAS_WIDTH / 2, 0);
+    ctx.lineTo(CANVAS_WIDTH / 2, CANVAS_HEIGHT);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    
+    // Paddles zeichnen
+    ctx.fillStyle = '#00ffff';
+    ctx.fillRect(pongState.leftPaddle.x, pongState.leftPaddle.y, pongState.leftPaddle.width, pongState.leftPaddle.height);
+    ctx.fillRect(pongState.rightPaddle.x, pongState.rightPaddle.y, pongState.rightPaddle.width, pongState.rightPaddle.height);
+    
+    // Ball zeichnen
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(pongState.ball.x, pongState.ball.y, pongState.ball.radius, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Ball-Trail-Effekt
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+    for (let i = 1; i <= 3; i++) {
+      const trailX = pongState.ball.x - pongState.ball.speedX * i;
+      const trailY = pongState.ball.y - pongState.ball.speedY * i;
+      const trailRadius = pongState.ball.radius * (1 - i * 0.2);
+      
+      ctx.beginPath();
+      ctx.arc(trailX, trailY, trailRadius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    
+    // Score auf Canvas
+    ctx.fillStyle = '#ffff00';
+    ctx.font = 'bold 48px Orbitron, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(pongState.leftPaddle.score.toString(), CANVAS_WIDTH / 4, 60);
+    ctx.fillText(pongState.rightPaddle.score.toString(), 3 * CANVAS_WIDTH / 4, 60);
+    
+    // Level anzeigen
+    ctx.fillStyle = '#00ffff';
+    ctx.font = '16px Orbitron, monospace';
+    ctx.fillText(`Level ${pongState.level}`, CANVAS_WIDTH / 2, CANVAS_HEIGHT - 20);
+    
+  }, [pongState]);
+
+  // Game-Loop
+  useEffect(() => {
+    if (gameStatus === 'playing' && pongState.gameRunning) {
+      const gameLoop = () => {
+        updateGame();
+        drawGame();
+        gameLoopRef.current = requestAnimationFrame(gameLoop);
+      };
+      
+      gameLoopRef.current = requestAnimationFrame(gameLoop);
+      
+      return () => {
+        if (gameLoopRef.current) {
+          cancelAnimationFrame(gameLoopRef.current);
+        }
+      };
+    }
+  }, [gameStatus, pongState.gameRunning, updateGame, drawGame]);
+
+  // Zeichnen wenn sich State ändert
+  useEffect(() => {
+    if (gameStatus !== 'idle') {
+      drawGame();
+    }
+  }, [pongState, gameStatus, drawGame]);
+
+  // Neues Spiel starten
+  const startNewGame = () => {
+    setGameStatus('playing');
+    setPongState(prev => ({
+      ...prev,
+      leftPaddle: { ...prev.leftPaddle, score: 0, y: CANVAS_HEIGHT / 2 - PADDLE_HEIGHT / 2 },
+      rightPaddle: { ...prev.rightPaddle, score: 0, y: CANVAS_HEIGHT / 2 - PADDLE_HEIGHT / 2 },
+      ball: {
+        x: CANVAS_WIDTH / 2,
+        y: CANVAS_HEIGHT / 2,
+        radius: BALL_RADIUS,
+        speedX: Math.random() > 0.5 ? INITIAL_BALL_SPEED : -INITIAL_BALL_SPEED,
+        speedY: (Math.random() - 0.5) * INITIAL_BALL_SPEED,
+        maxSpeed: MAX_BALL_SPEED
+      },
+      gameRunning: true,
+      level: 1,
+      gameMode: gameMode
+    }));
+    setShowHighScore(false);
+    addDebugLog(`🚀 Started new ${gameMode} player game`);
+  };
+
+  // Spiel pausieren/fortsetzen
+  const toggleGame = () => {
+    if (gameStatus === 'playing') {
+      setGameStatus('paused');
+      setPongState(prev => ({ ...prev, gameRunning: false }));
+      addDebugLog('⏸️ Game paused');
+    } else if (gameStatus === 'paused') {
+      setGameStatus('playing');
+      setPongState(prev => ({ ...prev, gameRunning: true }));
+      addDebugLog('▶️ Game resumed');
+    }
+  };
+
+  // Spiel zurücksetzen
+  const resetGame = () => {
+    setGameStatus('idle');
+    setPongState(prev => ({
+      ...prev,
+      leftPaddle: { ...prev.leftPaddle, score: 0, y: CANVAS_HEIGHT / 2 - PADDLE_HEIGHT / 2 },
+      rightPaddle: { ...prev.rightPaddle, score: 0, y: CANVAS_HEIGHT / 2 - PADDLE_HEIGHT / 2 },
+      ball: {
+        x: CANVAS_WIDTH / 2,
+        y: CANVAS_HEIGHT / 2,
+        radius: BALL_RADIUS,
+        speedX: INITIAL_BALL_SPEED,
+        speedY: INITIAL_BALL_SPEED,
+        maxSpeed: MAX_BALL_SPEED
+      },
+      gameRunning: false,
+      level: 1
+    }));
+    setShowHighScore(false);
+    addDebugLog('🔄 Game reset');
+  };
+
+  // Game Mode ändern
+  const changeGameMode = (mode: 'single' | 'multi') => {
+    setGameMode(mode);
+    resetGame();
+    addDebugLog(`⚙️ Game mode changed to: ${mode} player`);
+  };
+
+  // Render-Content
+  const renderGameContent = () => {
+    if (gameStatus === 'idle') {
+      return (
+        <GameContent>
+          <h3>🏓 Pong Game</h3>
+          <p>Classic arcade tennis simulation!</p>
+          <p>🎯 First to {WINNING_SCORE} points wins</p>
+          <p>🎮 Player 1: W/S or ↑/↓</p>
+          {gameMode === 'multi' && <p>🎮 Player 2: Arrow Keys</p>}
+          <p>Press START GAME to begin!</p>
+        </GameContent>
+      );
+    }
+
+    if (gameStatus === 'paused') {
+      return (
+        <GameContent>
+          <h3>⏸️ GAME PAUSED</h3>
+          <p>Score: {pongState.leftPaddle.score} - {pongState.rightPaddle.score}</p>
+          <p>Press RESUME to continue</p>
+        </GameContent>
+      );
+    }
+
+    if (gameStatus === 'gameover') {
+      const winner = pongState.leftPaddle.score >= WINNING_SCORE ? 
+        'Player 1' : (gameMode === 'single' ? 'Computer' : 'Player 2');
+      
+      return (
+        <GameOver>
+          <h3>🏆 GAME OVER!</h3>
+          <p>Winner: {winner}</p>
+          <p>Final Score: {pongState.leftPaddle.score} - {pongState.rightPaddle.score}</p>
+          <p>Mode: {gameMode === 'single' ? 'Single Player' : 'Multiplayer'}</p>
+          {showHighScore && winner === 'Player 1' && (
+            <div style={{
+              background: 'rgba(255, 215, 0, 0.2)',
+              border: '1px solid #ffd700',
+              borderRadius: '5px',
+              padding: '10px',
+              margin: '10px 0',
+              color: '#ffd700',
+              fontWeight: 'bold'
+            }}>
+              🏆 NEW HIGH SCORE! 🏆
+            </div>
+          )}
+          {!isLoggedIn && (
+            <p style={{ color: '#ff6b9d', fontSize: '0.9rem' }}>
+              💡 Login to save your high scores!
+            </p>
+          )}
+        </GameOver>
+      );
+    }
+
+    return null;
+  };
+
+  return (
+    <PongGameContainer>
+      <GameTitle>🏓 Retro Pong Game v2.0</GameTitle>
+      
+      {/* Debug Panel */}
+      <DebugPanel>
+        <strong>🐛 DEBUG INFO:</strong><br/>
+        Game Status: {gameStatus}<br/>
+        Game Mode: {gameMode}<br/>
+        Ball Speed: {Math.abs(pongState.ball.speedX).toFixed(1)}<br/>
+        Level: {pongState.level}<br/>
+        Keys: {Object.entries(keys).filter(([_, pressed]) => pressed).map(([key]) => key).join(', ')}<br/>
+        User: {isLoggedIn ? currentUser?.username : 'Not logged in'}<br/>
+        <strong>Recent Logs:</strong><br/>
+        {debugLogs.map((log, i) => <div key={i}>{log}</div>)}
+      </DebugPanel>
+      
+      {/* Game Mode Selector */}
+      <GameModeSelector>
+        <label>
+          <input
+            type="radio"
+            name="gameMode"
+            value="single"
+            checked={gameMode === 'single'}
+            onChange={() => changeGameMode('single')}
+          />
+          Single Player (vs AI)
+        </label>
+        <label>
+          <input
+            type="radio"
+            name="gameMode"
+            value="multi"
+            checked={gameMode === 'multi'}
+            onChange={() => changeGameMode('multi')}
+          />
+          Multiplayer (2 Players)
+        </label>
+      </GameModeSelector>
+
+      {/* Score Display */}
+      <GameInfo>
+        <ScoreDisplay>
+          <div className="player-score">
+            <h3>Player 1</h3>
+            <div className="score">{pongState.leftPaddle.score}</div>
+          </div>
+          
+          <div className="game-info">
+            <div className="level">Level {pongState.level}</div>
+            <div className="speed">Speed: {Math.abs(pongState.ball.speedX).toFixed(1)}</div>
+          </div>
+          
+          <div className="player-score">
+            <h3>{gameMode === 'single' ? 'Computer' : 'Player 2'}</h3>
+            <div className="score">{pongState.rightPaddle.score}</div>
+          </div>
+        </ScoreDisplay>
+      </GameInfo>
+
+      {/* Game Screen */}
+      <GameScreen isActive={gameStatus === 'playing'}>
+        {gameStatus === 'playing' || gameStatus === 'paused' ? (
+          <GameCanvas
+            ref={canvasRef}
+            width={CANVAS_WIDTH}
+            height={CANVAS_HEIGHT}
+          />
+        ) : (
+          renderGameContent()
+        )}
+      </GameScreen>
+
+      {/* Controls */}
+      <ControlsContainer>
+        <ControlButton
+          variant="success"
+          onClick={startNewGame}
+          disabled={gameStatus === 'playing'}
+        >
+          🚀 {gameStatus === 'idle' ? 'Start Game' : 'New Game'}
+        </ControlButton>
+        
+        <ControlButton
+          onClick={toggleGame}
+          disabled={gameStatus === 'idle' || gameStatus === 'gameover'}
+        >
+          {gameStatus === 'playing' ? '⏸️ Pause' : '▶️ Resume'}
+        </ControlButton>
+        
+        <ControlButton
+          variant="secondary"
+          onClick={resetGame}
+        >
+          🔄 Reset
+        </ControlButton>
+      </ControlsContainer>
+
+      {/* Instructions */}
+      <div style={{ color: '#00ffff', textAlign: 'center', fontSize: '0.9rem' }}>
+        <p>🏓 <strong>Goal:</strong> First to {WINNING_SCORE} points wins!</p>
+        <p>🎮 <strong>Player 1:</strong> W/S keys or ↑/↓ arrows</p>
+        {gameMode === 'multi' && <p>🎮 <strong>Player 2:</strong> Arrow keys only</p>}
+        <p>⚡ <strong>Tip:</strong> Hit the ball with paddle edges for angle shots!</p>
+      </div>
+    </PongGameContainer>
+  );
+};
+
+export default PongGame;

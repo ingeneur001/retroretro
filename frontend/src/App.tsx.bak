@@ -1,0 +1,89 @@
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { ModeProvider } from './hooks/useModeDetection';
+import { UserProvider } from './components/interfaces/user/UserManager';  
+import RetroArcadeHome from './components/core/RetroArcadeHome';
+import GamesZoneHub from './components/gameszone/GamesZoneHub';
+import SingleplayerZone from './components/gameszone/singleplayer/SingleplayerZone';
+
+// Import individual games
+import SnakeGame from './components/gameszone/singleplayer/SnakeGame';
+import TetrisGame from './components/gameszone/singleplayer/TetrisGame';
+import MemoryGame from './components/gameszone/singleplayer/MemoryGame';
+import PongGame from './components/gameszone/singleplayer/PongGame';
+import MultiplayerZone from './components/gameszone/multiplayer/MultiplayerZone';
+import PongMultiplayer from './components/gameszone/multiplayer/PongMultiplayer'; // 🆕 HINZUGEFÜGT
+
+import './index.css';
+
+// Debug Wrapper Komponenten
+const GamesZoneWrapper = () => {
+  console.log('🎮 Route: /games matched');
+  return <GamesZoneHub />;
+};
+
+const SingleplayerWrapper = () => {
+  console.log('🎲 Route: /games/singleplayer matched');
+  return <SingleplayerZone />;
+};
+
+// Game Wrapper Komponenten
+const SnakeWrapper = () => {
+  console.log('🐍 Route: /games/singleplayer/snake matched');
+  return <SnakeGame />;
+};
+
+const TetrisWrapper = () => {
+  console.log('🧩 Route: /games/singleplayer/tetris matched');
+  return <TetrisGame />;
+};
+
+const MemoryWrapper = () => {
+  console.log('🧠 Route: /games/singleplayer/memory matched');
+  return <MemoryGame />;
+};
+
+// 🆕 PONG WRAPPER HINZUGEFÜGT
+const PongWrapper = () => {
+  console.log('🏓 Route: /games/singleplayer/pong matched');
+  return <PongGame />;
+};
+// Multiplayer Wrapper Komponenten
+const MultiplayerZoneWrapper = () => {
+  console.log('👥 Route: /games/multiplayer matched');
+  return <MultiplayerZone />;
+};
+
+const PongMultiplayerWrapper = () => {
+  console.log('🏓 Route: /games/multiplayer/pong matched');
+  return <PongMultiplayer />;
+};
+
+function App() {
+  console.log('🚀 App.tsx: Rendering with Router');
+  
+  return (
+    <ModeProvider>
+      <UserProvider> 
+        <Router>
+          <div className="App">
+            <Routes>
+              {/* Main Routes */}
+              <Route path="/" element={<RetroArcadeHome />} />
+              <Route path="/games" element={<GamesZoneWrapper />} />
+              <Route path="/games/singleplayer" element={<SingleplayerWrapper />} />
+            
+              {/* Individual Game Routes */}
+              <Route path="/games/singleplayer/snake" element={<SnakeWrapper />} />
+              <Route path="/games/singleplayer/tetris" element={<TetrisWrapper />} />
+              <Route path="/games/singleplayer/memory" element={<MemoryWrapper />} />
+              <Route path="/games/singleplayer/pong" element={<PongWrapper />} /> {/* 🆕 PONG ROUTE */}
+            </Routes>
+          </div>
+        </Router>
+      </UserProvider>
+    </ModeProvider>
+  );
+}
+
+export default App;

@@ -1,0 +1,550 @@
+// src/styles/components.tsx - Professionelle Version
+import styled, { keyframes } from 'styled-components';
+
+// Animations für Gaming-Komponenten
+const pulseGlow = keyframes`
+  0%, 100% { 
+    box-shadow: 0 0 5px currentColor; 
+  }
+  50% { 
+    box-shadow: 0 0 20px currentColor, 0 0 30px currentColor; 
+  }
+`;
+
+const slideIn = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`;
+
+const neonFlicker = keyframes`
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+  75% { opacity: 0.9; }
+`;
+
+// ========================================
+// LAYOUT KOMPONENTEN
+// ========================================
+
+export const AppContainer = styled.div`
+  min-height: 100vh;
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.text};
+  font-family: ${({ theme }) => theme.fonts.primary};
+  display: flex;
+  flex-direction: column;
+`;
+
+export const PageHeader = styled.header`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: ${({ theme }) => theme.spacing.md} ${({ theme }) => theme.spacing.lg};
+  background: ${({ theme }) => theme.colors.surface};
+  border-bottom: 2px solid ${({ theme }) => theme.colors.primary};
+  backdrop-filter: blur(10px);
+`;
+
+export const PageTitle = styled.h1`
+  color: ${({ theme }) => theme.colors.primary};
+  font-size: ${({ theme }) => theme.fonts.sizes.xl};
+  font-weight: ${({ theme }) => theme.fonts.weights.bold};
+  margin: 0;
+  text-shadow: ${({ theme }) => theme.effects.neonGlow};
+`;
+
+export const ContentArea = styled.main`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: ${({ theme }) => theme.spacing.lg};
+  
+  @media (max-width: ${({ theme }) => theme.breakpoints.mobile}) {
+    padding: ${({ theme }) => theme.spacing.md};
+  }
+`;
+
+export const CenteredContent = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex: 1;
+  min-height: 400px;
+`;
+
+// ========================================
+// BUTTON KOMPONENTEN
+// ========================================
+
+interface ButtonProps {
+  variant?: 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'ghost';
+  size?: 'small' | 'medium' | 'large';
+  fullWidth?: boolean;
+  disabled?: boolean;
+}
+
+export const Button = styled.button<ButtonProps>`
+  font-family: ${({ theme }) => theme.fonts.primary};
+  font-weight: ${({ theme }) => theme.fonts.weights.bold};
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all ${({ theme }) => theme.animations.normal};
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  
+  /* Size variants */
+  ${({ size = 'medium', theme }) => {
+    switch (size) {
+      case 'small':
+        return `
+          padding: ${theme.spacing.sm} ${theme.spacing.md};
+          font-size: ${theme.fonts.sizes.sm};
+        `;
+      case 'large':
+        return `
+          padding: ${theme.spacing.md} ${theme.spacing.xl};
+          font-size: ${theme.fonts.sizes.lg};
+        `;
+      default:
+        return `
+          padding: ${theme.spacing.md} ${theme.spacing.lg};
+          font-size: ${theme.fonts.sizes.md};
+        `;
+    }
+  }}
+  
+  /* Color variants */
+  ${({ variant = 'primary', theme }) => {
+    switch (variant) {
+      case 'secondary':
+        return `
+          background: linear-gradient(45deg, ${theme.colors.secondary}, #36b5a0);
+          color: white;
+          &:hover {
+            background: linear-gradient(45deg, #36b5a0, ${theme.colors.secondary});
+            ${theme.effects.buttonHover}
+          }
+        `;
+      case 'success':
+        return `
+          background: linear-gradient(45deg, ${theme.colors.success}, #36b5a0);
+          color: white;
+          &:hover {
+            background: linear-gradient(45deg, #36b5a0, ${theme.colors.success});
+            ${theme.effects.buttonHover}
+          }
+        `;
+      case 'warning':
+        return `
+          background: linear-gradient(45deg, ${theme.colors.warning}, #e6c200);
+          color: black;
+          &:hover {
+            background: linear-gradient(45deg, #e6c200, ${theme.colors.warning});
+            ${theme.effects.buttonHover}
+          }
+        `;
+      case 'error':
+        return `
+          background: linear-gradient(45deg, ${theme.colors.error}, #e55555);
+          color: white;
+          &:hover {
+            background: linear-gradient(45deg, #e55555, ${theme.colors.error});
+            ${theme.effects.buttonHover}
+          }
+        `;
+      case 'ghost':
+        return `
+          background: transparent;
+          color: ${theme.colors.text};
+          border: 2px solid ${theme.colors.border};
+          &:hover {
+            background: ${theme.colors.surface};
+            border-color: ${theme.colors.primary};
+            color: ${theme.colors.primary};
+            ${theme.effects.buttonHover}
+          }
+        `;
+      default:
+        return `
+          background: linear-gradient(45deg, ${theme.colors.primary}, #e55555);
+          color: white;
+          &:hover {
+            background: linear-gradient(45deg, #e55555, ${theme.colors.primary});
+            ${theme.effects.buttonHover}
+          }
+        `;
+    }
+  }}
+  
+  /* Full width */
+  ${({ fullWidth }) => fullWidth && 'width: 100%;'}
+  
+  /* Disabled state */
+  ${({ disabled }) => disabled && `
+    opacity: 0.5;
+    cursor: not-allowed;
+    &:hover {
+      transform: none;
+      box-shadow: none;
+    }
+  `}
+`;
+
+// ========================================
+// CARD KOMPONENTEN
+// ========================================
+
+export const Card = styled.div`
+  background: ${({ theme }) => theme.colors.surface};
+  border-radius: 20px;
+  padding: ${({ theme }) => theme.spacing.lg};
+  box-shadow: ${({ theme }) => theme.effects.cardShadow};
+  backdrop-filter: blur(10px);
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  
+  &:hover {
+    background: ${({ theme }) => theme.colors.surfaceHover};
+    transition: all ${({ theme }) => theme.animations.normal};
+  }
+`;
+
+export const CardTitle = styled.h3`
+  color: ${({ theme }) => theme.colors.primary};
+  font-size: ${({ theme }) => theme.fonts.sizes.lg};
+  margin: 0 0 ${({ theme }) => theme.spacing.md} 0;
+  text-shadow: ${({ theme }) => theme.effects.neonGlow};
+`;
+
+export const CardContent = styled.div`
+  color: ${({ theme }) => theme.colors.text};
+  line-height: 1.6;
+`;
+
+// ========================================
+// FORM KOMPONENTEN
+// ========================================
+
+export const FormContainer = styled.form`
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.spacing.md};
+  max-width: 400px;
+  margin: 0 auto;
+`;
+
+export const Input = styled.input`
+  font-family: ${({ theme }) => theme.fonts.primary};
+  padding: ${({ theme }) => theme.spacing.md};
+  border: 2px solid ${({ theme }) => theme.colors.border};
+  border-radius: 10px;
+  background: ${({ theme }) => theme.colors.surface};
+  color: ${({ theme }) => theme.colors.text};
+  font-size: ${({ theme }) => theme.fonts.sizes.md};
+  transition: all ${({ theme }) => theme.animations.normal};
+  
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.primary};
+    box-shadow: ${({ theme }) => theme.effects.glow};
+  }
+  
+  &::placeholder {
+    color: ${({ theme }) => theme.colors.textSecondary};
+  }
+`;
+
+export const Label = styled.label`
+  color: ${({ theme }) => theme.colors.text};
+  font-size: ${({ theme }) => theme.fonts.sizes.md};
+  font-weight: ${({ theme }) => theme.fonts.weights.bold};
+  margin-bottom: ${({ theme }) => theme.spacing.sm};
+`;
+
+// ========================================
+// NAVIGATION KOMPONENTEN
+// ========================================
+
+export const NavContainer = styled.nav`
+  display: flex;
+  gap: ${({ theme }) => theme.spacing.md};
+  align-items: center;
+  flex-wrap: wrap;
+`;
+
+interface NavButtonProps {
+  active?: boolean;
+}
+
+export const NavButton = styled.button<NavButtonProps>`
+  font-family: ${({ theme }) => theme.fonts.primary};
+  font-size: ${({ theme }) => theme.fonts.sizes.md};
+  padding: ${({ theme }) => theme.spacing.sm} ${({ theme }) => theme.spacing.md};
+  border: none;
+  border-radius: 15px;
+  cursor: pointer;
+  transition: all ${({ theme }) => theme.animations.normal};
+  
+  ${({ active, theme }) => active ? `
+    background: ${theme.colors.primary};
+    color: white;
+    box-shadow: ${theme.effects.glow};
+  ` : `
+    background: transparent;
+    color: ${theme.colors.textSecondary};
+    border: 1px solid ${theme.colors.border};
+    
+    &:hover {
+      background: ${theme.colors.surface};
+      color: ${theme.colors.text};
+      border-color: ${theme.colors.primary};
+    }
+  `}
+`;
+
+// ========================================
+// UTILITY KOMPONENTEN
+// ========================================
+
+export const Spacer = styled.div<{ size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl' }>`
+  height: ${({ size = 'md', theme }) => theme.spacing[size]};
+  width: 100%;
+`;
+
+export const FlexRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.md};
+`;
+
+export const FlexColumn = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.spacing.md};
+`;
+
+export const Text = styled.p<{ 
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl' | 'title' | 'display'; 
+  color?: string 
+}>`
+  font-size: ${({ size = 'md', theme }) => theme.fonts.sizes[size]};
+  color: ${({ color, theme }) => color || theme.colors.text};
+  margin: 0;
+  line-height: 1.6;
+`;
+
+// ========================================
+// GAMING-KOMPONENTEN - PROFESSIONELL
+// ========================================
+
+// SCORE COMPONENTS
+export const ScoreDisplay = styled.div<{ 
+  size?: 'sm' | 'md' | 'lg' | 'xl';
+  glow?: boolean;
+  animated?: boolean;
+}>`
+  font-family: ${({ theme }) => theme.fonts.arcade};
+  color: ${({ theme }) => theme.colors.score};
+  font-weight: bold;
+  text-align: center;
+  text-shadow: ${({ theme }) => theme.effects.scoreGlow};
+  
+  ${({ size = 'md', theme }) => {
+    const sizeMap = {
+      sm: theme.fonts.sizes.md,
+      md: theme.fonts.sizes.lg,
+      lg: theme.fonts.sizes.xl,
+      xl: theme.fonts.sizes.display,
+    };
+    return `font-size: ${sizeMap[size]};`;
+  }}
+  
+  ${({ glow }) => glow && `
+    animation: ${pulseGlow} 2s ease-in-out infinite;
+  `}
+  
+  ${({ animated }) => animated && `
+    animation: ${slideIn} 0.5s ease-out;
+  `}
+`;
+
+export const HighScoreLabel = styled.span`
+  color: ${({ theme }) => theme.colors.scoreHighlight};
+  text-shadow: ${({ theme }) => theme.effects.scoreGlow};
+  font-family: ${({ theme }) => theme.fonts.arcade};
+  font-size: ${({ theme }) => theme.fonts.sizes.sm};
+  text-transform: uppercase;
+  letter-spacing: 1px;
+`;
+
+export const LiveScore = styled.div<{ isIncreasing?: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.sm};
+  color: ${({ theme }) => theme.colors.score};
+  font-family: ${({ theme }) => theme.fonts.monospace};
+  font-weight: bold;
+  
+  ${({ isIncreasing }) => isIncreasing && `
+    animation: ${pulseGlow} 0.3s ease-out;
+    transform: scale(1.1);
+  `}
+  
+  &::before {
+    content: '💯';
+    font-size: 1.2em;
+  }
+`;
+
+// SETTINGS COMPONENTS
+export const SettingsPanel = styled.div<{ isOpen?: boolean }>`
+  background: ${({ theme }) => theme.colors.surface};
+  border: 2px solid ${({ theme }) => theme.colors.settings};
+  border-radius: ${({ theme }) => theme.borderRadius.lg};
+  padding: ${({ theme }) => theme.spacing.lg};
+  box-shadow: ${({ theme }) => theme.effects.settingsGlow};
+  
+  ${({ isOpen }) => isOpen && `
+    animation: ${slideIn} 0.3s ease-out;
+  `}
+`;
+
+export const SettingsSection = styled.div`
+  margin-bottom: ${({ theme }) => theme.spacing.lg};
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+`;
+
+export const SettingsTitle = styled.h3`
+  color: ${({ theme }) => theme.colors.settings};
+  font-family: ${({ theme }) => theme.fonts.arcade};
+  font-size: ${({ theme }) => theme.fonts.sizes.md};
+  margin-bottom: ${({ theme }) => theme.spacing.md};
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-shadow: ${({ theme }) => theme.effects.settingsGlow};
+`;
+
+export const SettingsItem = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: ${({ theme }) => theme.spacing.md};
+  background: rgba(0, 255, 255, 0.1);
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  margin-bottom: ${({ theme }) => theme.spacing.sm};
+  transition: all ${({ theme }) => theme.animations.fast};
+  
+  &:hover {
+    background: rgba(0, 255, 255, 0.2);
+    border-color: ${({ theme }) => theme.colors.settings};
+    transform: translateX(4px);
+  }
+`;
+
+export const SettingsLabel = styled.label`
+  color: ${({ theme }) => theme.colors.text};
+  font-weight: ${({ theme }) => theme.fonts.weights.medium};
+  cursor: pointer;
+  
+  &:hover {
+    color: ${({ theme }) => theme.colors.settings};
+  }
+`;
+
+export const SettingsValue = styled.div<{ active?: boolean }>`
+  color: ${({ active, theme }) => 
+    active ? theme.colors.settingsActive : theme.colors.textSecondary
+  };
+  font-family: ${({ theme }) => theme.fonts.monospace};
+  font-weight: bold;
+  
+  ${({ active }) => active && `
+    text-shadow: 0 0 10px currentColor;
+  `}
+`;
+
+// LEADERBOARD COMPONENTS
+export const LeaderboardContainer = styled.div`
+  background: ${({ theme }) => theme.colors.surface};
+  border: 2px solid ${({ theme }) => theme.colors.leaderboard};
+  border-radius: ${({ theme }) => theme.borderRadius.lg};
+  padding: ${({ theme }) => theme.spacing.lg};
+  box-shadow: 0 0 20px rgba(255, 107, 53, 0.3);
+`;
+
+export const LeaderboardTitle = styled.h2`
+  color: ${({ theme }) => theme.colors.leaderboard};
+  font-family: ${({ theme }) => theme.fonts.arcade};
+  text-align: center;
+  margin-bottom: ${({ theme }) => theme.spacing.lg};
+  text-shadow: 0 0 15px currentColor;
+  animation: ${neonFlicker} 3s ease-in-out infinite;
+`;
+
+export const LeaderboardEntry = styled.div<{ rank: number }>`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.spacing.md};
+  padding: ${({ theme }) => theme.spacing.md};
+  background: ${({ rank }) => {
+    if (rank === 1) return 'rgba(255, 215, 0, 0.1)';
+    if (rank === 2) return 'rgba(192, 192, 192, 0.1)';
+    if (rank === 3) return 'rgba(205, 127, 50, 0.1)';
+    return 'rgba(255, 255, 255, 0.05)';
+  }};
+  border: 2px solid ${({ rank, theme }) => {
+    if (rank === 1) return '#ffd700';
+    if (rank === 2) return '#c0c0c0';
+    if (rank === 3) return '#cd7f32';
+    return theme.colors.border;
+  }};
+  border-radius: ${({ theme }) => theme.borderRadius.md};
+  margin-bottom: ${({ theme }) => theme.spacing.sm};
+  transition: all ${({ theme }) => theme.animations.fast};
+  
+  &:hover {
+    transform: translateX(8px);
+    box-shadow: ${({ rank }) => {
+      if (rank <= 3) return '0 0 20px currentColor';
+      return '0 4px 12px rgba(0, 0, 0, 0.3)';
+    }};
+  }
+`;
+
+export const RankBadge = styled.div<{ rank: number }>`
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-family: ${({ theme }) => theme.fonts.arcade};
+  font-size: ${({ theme }) => theme.fonts.sizes.sm};
+  font-weight: bold;
+  
+  background: ${({ rank }) => {
+    if (rank === 1) return 'linear-gradient(45deg, #ffd700, #ffed4e)';
+    if (rank === 2) return 'linear-gradient(45deg, #c0c0c0, #e5e5e5)';
+    if (rank === 3) return 'linear-gradient(45deg, #cd7f32, #daa560)';
+    return 'linear-gradient(45deg, #333, #555)';
+  }};
+  
+  color: ${({ rank }) => rank <= 3 ? '#000' : '#fff'};
+  
+  ${({ rank }) => rank <= 3 && `
+    box-shadow: 0 0 15px currentColor;
+    animation: ${pulseGlow} 2s ease-in-out infinite;
+  `}
+`;

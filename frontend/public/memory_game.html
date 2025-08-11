@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retro Memory Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+            font-family: 'Courier New', monospace;
+            color: #00ffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .game-container {
+            text-align: center;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #00ffff;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
+        }
+
+        h1 {
+            color: #ff6b9d;
+            text-shadow: 0 0 10px #ff6b9d;
+            margin-bottom: 20px;
+            font-size: 2.5em;
+        }
+
+        .game-info {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            font-size: 1.2em;
+        }
+
+        .info-item {
+            background: rgba(0, 255, 255, 0.1);
+            padding: 10px 20px;
+            border: 1px solid #00ffff;
+            border-radius: 8px;
+        }
+
+        canvas {
+            border: 3px solid #00ffff;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+            background: #0a0a0a;
+            cursor: pointer;
+        }
+
+        .controls {
+            margin-top: 20px;
+        }
+
+        button {
+            background: linear-gradient(45deg, #ff6b9d, #ff8e8e);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            margin: 0 10px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(255, 107, 157, 0.3);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 107, 157, 0.5);
+        }
+
+        .difficulty-selector {
+            margin: 20px 0;
+        }
+
+        .difficulty-selector label {
+            margin: 0 15px;
+            cursor: pointer;
+        }
+
+        .difficulty-selector input[type="radio"] {
+            margin-right: 5px;
+        }
+
+        .game-complete {
+            background: rgba(0, 255, 0, 0.1);
+            border: 2px solid #00ff00;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 20px rgba(0, 255, 0, 0.3); }
+            50% { box-shadow: 0 0 30px rgba(0, 255, 0, 0.6); }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🧠 RETRO MEMORY GAME 🧠</h1>
+        
+        <div class="difficulty-selector">
+            <label><input type="radio" name="difficulty" value="easy" checked> Easy (4x3)</label>
+            <label><input type="radio" name="difficulty" value="medium"> Medium (4x4)</label>
+            <label><input type="radio" name="difficulty" value="hard"> Hard (6x4)</label>
+        </div>
+
+        <div class="game-info">
+            <div class="info-item">
+                <div>⏱️ Zeit: <span id="timeDisplay">00:00</span></div>
+            </div>
+            <div class="info-item">
+                <div>🎯 Züge: <span id="movesDisplay">0</span></div>
+            </div>
+            <div class="info-item">
+                <div>🎉 Paare: <span id="pairsDisplay">0/6</span></div>
+            </div>
+        </div>
+
+        <canvas id="gameCanvas" width="480" height="360"></canvas>
+
+        <div class="controls">
+            <button onclick="startNewGame()">🎮 Neues Spiel</button>
+            <button onclick="resetGame()">🔄 Reset</button>
+        </div>
+
+        <div id="gameComplete" class="game-complete" style="display: none;">
+            <h2>🎉 HERZLICHEN GLÜCKWUNSCH! 🎉</h2>
+            <p>Du hast alle Paare gefunden!</p>
+            <p>Zeit: <span id="finalTime"></span> | Züge: <span id="finalMoves"></span></p>
+        </div>
+    </div>
+
+    <script>
+        // Game variables
+        let canvas, ctx;
+        let gameState = 'menu';
+        let cards = [];
+        let flippedCards = [];
+        let matchedPairs = 0;
+        let moves = 0;
+        let startTime = null;
+        let gameTimer = null;
+        let difficulty = 'easy';
+        
+        // Game settings
+        const difficulties = {
+            easy: { cols: 4, rows: 3, pairs: 6 },
+            medium: { cols: 4, rows: 4, pairs: 8 },
+            hard: { cols: 6, rows: 4, pairs: 12 }
+        };
+
+        // Card symbols (retro gaming themed)
+        const symbols = ['🕹️', '👾', '🎮', '🎯', '🎲', '⭐', '💎', '🔥', '⚡', '🎪', '🎨', '🎭'];
+        
+        // Colors
+        const colors = {
+            background: '#0a0a0a',
+            cardBack: '#1a1a2e',
+            cardBorder: '#00ffff',
+            cardFlipped: '#16213e',
+            text: '#00ffff',
+            matched: '#00ff00',
+            highlight: '#ff6b9d'
+        };
+
+        // Initialize game
+        function init() {
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+            
+            canvas.addEventListener('click', handleClick);
+            
+            // Difficulty change listener
+            document.querySelectorAll('input[name="difficulty"]').forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    difficulty = e.target.value;
+                    updateCanvasSize();
+                    startNewGame();
+                });
+            });
+            
+            updateCanvasSize();
+            startNewGame();
+        }
+
+        function updateCanvasSize() {
+            const config = difficulties[difficulty];
+            canvas.width = config.cols * 80 + (config.cols + 1) * 10;
+            canvas.height = config.rows * 100 + (config.rows + 1) * 10;
+        }
+
+        function startNewGame() {
+            const config = difficulties[difficulty];
+            gameState = 'playing';
+            matchedPairs = 0;
+            moves = 0;
+            flippedCards = [];
+            startTime = Date.now();
+            
+            // Hide completion message
+            document.getElementById('gameComplete').style.display = 'none';
+            
+            // Create cards
+            createCards();
+            
+            // Start timer
+            if (gameTimer) clearInterval(gameTimer);
+            gameTimer = setInterval(updateTimer, 1000);
+            
+            // Update displays
+            updateDisplay();
+            draw();
+        }
+
+        function createCards() {
+            const config = difficulties[difficulty];
+            cards = [];
+            
+            // Create pairs of symbols
+            const gameSymbols = symbols.slice(0, config.pairs);
+            const cardSymbols = [...gameSymbols, ...gameSymbols];
+            
+            // Shuffle symbols
+            for (let i = cardSymbols.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [cardSymbols[i], cardSymbols[j]] = [cardSymbols[j], cardSymbols[i]];
+            }
+            
+            // Create card objects
+            let symbolIndex = 0;
+            for (let row = 0; row < config.rows; row++) {
+                for (let col = 0; col < config.cols; col++) {
+                    cards.push({
+                        x: col * 90 + 10,
+                        y: row * 110 + 10,
+                        width: 80,
+                        height: 100,
+                        symbol: cardSymbols[symbolIndex],
+                        flipped: false,
+                        matched: false,
+                        row: row,
+                        col: col
+                    });
+                    symbolIndex++;
+                }
+            }
+        }
+
+        function handleClick(event) {
+            if (gameState !== 'playing') return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            
+            // Find clicked card
+            const clickedCard = cards.find(card => 
+                x >= card.x && x <= card.x + card.width &&
+                y >= card.y && y <= card.y + card.height &&
+                !card.flipped && !card.matched
+            );
+            
+            if (clickedCard && flippedCards.length < 2) {
+                flipCard(clickedCard);
+            }
+        }
+
+        function flipCard(card) {
+            card.flipped = true;
+            flippedCards.push(card);
+            
+            if (flippedCards.length === 2) {
+                moves++;
+                updateDisplay();
+                
+                setTimeout(() => {
+                    checkMatch();
+                }, 1000);
+            }
+            
+            draw();
+        }
+
+        function checkMatch() {
+            const [card1, card2] = flippedCards;
+            
+            if (card1.symbol === card2.symbol) {
+                // Match found!
+                card1.matched = true;
+                card2.matched = true;
+                matchedPairs++;
+                
+                // Check win condition
+                if (matchedPairs === difficulties[difficulty].pairs) {
+                    gameWon();
+                }
+            } else {
+                // No match, flip back
+                card1.flipped = false;
+                card2.flipped = false;
+            }
+            
+            flippedCards = [];
+            updateDisplay();
+            draw();
+        }
+
+        function gameWon() {
+            gameState = 'completed';
+            clearInterval(gameTimer);
+            
+            // Show completion message
+            const gameComplete = document.getElementById('gameComplete');
+            const finalTime = document.getElementById('finalTime');
+            const finalMoves = document.getElementById('finalMoves');
+            
+            finalTime.textContent = document.getElementById('timeDisplay').textContent;
+            finalMoves.textContent = moves;
+            
+            gameComplete.style.display = 'block';
+        }
+
+        function resetGame() {
+            if (gameTimer) clearInterval(gameTimer);
+            gameState = 'menu';
+            cards.forEach(card => {
+                card.flipped = false;
+                card.matched = false;
+            });
+            flippedCards = [];
+            matchedPairs = 0;
+            moves = 0;
+            startTime = null;
+            
+            document.getElementById('gameComplete').style.display = 'none';
+            updateDisplay();
+            draw();
+        }
+
+        function updateTimer() {
+            if (startTime && gameState === 'playing') {
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                const minutes = Math.floor(elapsed / 60).toString().padStart(2, '0');
+                const seconds = (elapsed % 60).toString().padStart(2, '0');
+                document.getElementById('timeDisplay').textContent = `${minutes}:${seconds}`;
+            }
+        }
+
+        function updateDisplay() {
+            document.getElementById('movesDisplay').textContent = moves;
+            document.getElementById('pairsDisplay').textContent = `${matchedPairs}/${difficulties[difficulty].pairs}`;
+        }
+
+        function draw() {
+            // Clear canvas
+            ctx.fillStyle = colors.background;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw cards
+            cards.forEach(card => {
+                drawCard(card);
+            });
+        }
+
+        function drawCard(card) {
+            // Card background
+            if (card.matched) {
+                ctx.fillStyle = colors.matched;
+            } else if (card.flipped) {
+                ctx.fillStyle = colors.cardFlipped;
+            } else {
+                ctx.fillStyle = colors.cardBack;
+            }
+            
+            ctx.fillRect(card.x, card.y, card.width, card.height);
+            
+            // Card border
+            ctx.strokeStyle = card.matched ? colors.matched : colors.cardBorder;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(card.x, card.y, card.width, card.height);
+            
+            // Card content
+            if (card.flipped || card.matched) {
+                // Show symbol
+                ctx.font = '36px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = card.matched ? '#ffffff' : colors.text;
+                ctx.fillText(
+                    card.symbol,
+                    card.x + card.width / 2,
+                    card.y + card.height / 2
+                );
+            } else {
+                // Show card back pattern
+                ctx.fillStyle = colors.cardBorder;
+                ctx.font = '24px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('?', card.x + card.width / 2, card.y + card.height / 2);
+                
+                // Add some retro pattern
+                ctx.strokeStyle = colors.cardBorder;
+                ctx.lineWidth = 1;
+                for (let i = 0; i < 3; i++) {
+                    ctx.strokeRect(
+                        card.x + 10 + i * 5,
+                        card.y + 10 + i * 5,
+                        card.width - 20 - i * 10,
+                        card.height - 20 - i * 10
+                    );
+                }
+            }
+        }
+
+        // Initialize game when page loads
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>

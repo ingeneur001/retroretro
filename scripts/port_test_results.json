@@ -1,0 +1,172 @@
+{
+  "timestamp": "2025-08-03T07:30:46.287191",
+  "test_version": "2.0_scripts",
+  "stable_ports": [
+    {
+      "port": 3001,
+      "method": "environment_variable",
+      "config": "Standard-Port-ENV"
+    },
+    {
+      "port": 8080,
+      "method": "environment_variable",
+      "config": "HTTP-Alt-ENV"
+    },
+    {
+      "port": 8081,
+      "method": "environment_variable",
+      "config": "HTTP-Alt2-ENV"
+    },
+    {
+      "port": 3333,
+      "method": "environment_variable",
+      "config": "Dev-Port-ENV"
+    },
+    {
+      "port": 5000,
+      "method": "environment_variable",
+      "config": "Flask-Standard-ENV"
+    },
+    {
+      "port": 4000,
+      "method": "environment_variable",
+      "config": "Alt-Dev-ENV"
+    },
+    {
+      "port": 9000,
+      "method": "environment_variable",
+      "config": "High-Port-ENV"
+    },
+    {
+      "port": 7000,
+      "method": "environment_variable",
+      "config": "Extra-Port-ENV"
+    },
+    {
+      "port": 6000,
+      "method": "environment_variable",
+      "config": "Alt-Port-ENV"
+    },
+    {
+      "port": 8888,
+      "method": "environment_variable",
+      "config": "Alt-8888-ENV"
+    }
+  ],
+  "project_structure": {
+    "scripts_root": "D:\\Claude_Scripte\\RetroRetro\\legal-retro-gaming-service\\scripts",
+    "project_root": "D:\\Claude_Scripte\\RetroRetro\\legal-retro-gaming-service"
+  },
+  "full_results": {
+    "Standard-Port-ENV": {
+      "config": "Standard-Port-ENV",
+      "backend_port": 3001,
+      "method": "environment_variable",
+      "backend_started": true,
+      "initial_health_check": true,
+      "survived_30s": true,
+      "survived_60s": true,
+      "final_status": "stable",
+      "error_messages": []
+    },
+    "HTTP-Alt-ENV": {
+      "config": "HTTP-Alt-ENV",
+      "backend_port": 8080,
+      "method": "environment_variable",
+      "backend_started": true,
+      "initial_health_check": true,
+      "survived_30s": true,
+      "survived_60s": true,
+      "final_status": "stable",
+      "error_messages": []
+    },
+    "HTTP-Alt2-ENV": {
+      "config": "HTTP-Alt2-ENV",
+      "backend_port": 8081,
+      "method": "environment_variable",
+      "backend_started": true,
+      "initial_health_check": true,
+      "survived_30s": true,
+      "survived_60s": true,
+      "final_status": "stable",
+      "error_messages": []
+    },
+    "Dev-Port-ENV": {
+      "config": "Dev-Port-ENV",
+      "backend_port": 3333,
+      "method": "environment_variable",
+      "backend_started": true,
+      "initial_health_check": true,
+      "survived_30s": true,
+      "survived_60s": true,
+      "final_status": "stable",
+      "error_messages": []
+    },
+    "Flask-Standard-ENV": {
+      "config": "Flask-Standard-ENV",
+      "backend_port": 5000,
+      "method": "environment_variable",
+      "backend_started": true,
+      "initial_health_check": true,
+      "survived_30s": true,
+      "survived_60s": true,
+      "final_status": "stable",
+      "error_messages": []
+    },
+    "Alt-Dev-ENV": {
+      "config": "Alt-Dev-ENV",
+      "backend_port": 4000,
+      "method": "environment_variable",
+      "backend_started": true,
+      "initial_health_check": true,
+      "survived_30s": true,
+      "survived_60s": true,
+      "final_status": "stable",
+      "error_messages": []
+    },
+    "High-Port-ENV": {
+      "config": "High-Port-ENV",
+      "backend_port": 9000,
+      "method": "environment_variable",
+      "backend_started": true,
+      "initial_health_check": true,
+      "survived_30s": true,
+      "survived_60s": true,
+      "final_status": "stable",
+      "error_messages": []
+    },
+    "Extra-Port-ENV": {
+      "config": "Extra-Port-ENV",
+      "backend_port": 7000,
+      "method": "environment_variable",
+      "backend_started": true,
+      "initial_health_check": true,
+      "survived_30s": true,
+      "survived_60s": true,
+      "final_status": "stable",
+      "error_messages": []
+    },
+    "Alt-Port-ENV": {
+      "config": "Alt-Port-ENV",
+      "backend_port": 6000,
+      "method": "environment_variable",
+      "backend_started": true,
+      "initial_health_check": true,
+      "survived_30s": true,
+      "survived_60s": true,
+      "final_status": "stable",
+      "error_messages": []
+    },
+    "Alt-8888-ENV": {
+      "config": "Alt-8888-ENV",
+      "backend_port": 8888,
+      "method": "environment_variable",
+      "backend_started": true,
+      "initial_health_check": true,
+      "survived_30s": true,
+      "survived_60s": true,
+      "final_status": "stable",
+      "error_messages": []
+    }
+  }
+}

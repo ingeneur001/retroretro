@@ -1,0 +1,34 @@
+{
+  "timestamp": "2025-08-05T20:23:57.377217",
+  "backend_health": {},
+  "database": {},
+  "authentication": {},
+  "api_endpoints": {},
+  "websocket": {},
+  "games": {},
+  "multiplayer": {},
+  "performance": {},
+  "summary": {},
+  "beta_readiness": {
+    "user_registration": {
+      "status": "FAIL",
+      "error": "HTTPConnectionPool(host='localhost', port=3001): Max retries exceeded with url: /api/register (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000001E31CA2C050>: Failed to establish a new connection: [WinError 10061] Es konnte keine Verbindung hergestellt werden, da der Zielcomputer die Verbindung verweigerte'))"
+    },
+    "game_availability": {
+      "status": "FAIL",
+      "error": "HTTPConnectionPool(host='localhost', port=3001): Max retries exceeded with url: /api/games (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000001E31CA125D0>: Failed to establish a new connection: [WinError 10061] Es konnte keine Verbindung hergestellt werden, da der Zielcomputer die Verbindung verweigerte'))"
+    },
+    "leaderboard_function": {
+      "status": "FAIL",
+      "error": "HTTPConnectionPool(host='localhost', port=3001): Max retries exceeded with url: /api/leaderboard (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000001E31CA12AD0>: Failed to establish a new connection: [WinError 10061] Es konnte keine Verbindung hergestellt werden, da der Zielcomputer die Verbindung verweigerte'))"
+    },
+    "session_management": {
+      "status": "FAIL",
+      "error": "HTTPConnectionPool(host='localhost', port=3001): Max retries exceeded with url: /api/sessions (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000001E31C9B2B10>: Failed to establish a new connection: [WinError 10061] Es konnte keine Verbindung hergestellt werden, da der Zielcomputer die Verbindung verweigerte'))"
+    },
+    "error_handling": {
+      "status": "FAIL",
+      "error": "HTTPConnectionPool(host='localhost', port=3001): Max retries exceeded with url: /api/nonexistent (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000001E31C9B2EA0>: Failed to establish a new connection: [WinError 10061] Es konnte keine Verbindung hergestellt werden, da der Zielcomputer die Verbindung verweigerte'))"
+    }
+  }
+}

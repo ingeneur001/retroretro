@@ -1,0 +1,292 @@
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useModeDetection } from '../../../hooks/useModeDetection';
+import { GameNavigation, GameNavigationPresets } from '../shared/GameNavigation';
+import styled from 'styled-components';
+
+// Styled Components
+const ZoneContainer = styled.div`
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+  color: white;
+  padding: 2rem;
+  font-family: 'Orbitron', monospace;
+`;
+
+const ZoneHeader = styled.div`
+  text-align: center;
+  margin-bottom: 3rem;
+`;
+
+const ZoneTitle = styled.h1`
+  font-size: 3rem;
+  background: linear-gradient(45deg, #00ffff, #ff00ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 1rem;
+  text-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+
+  @media (max-width: 768px) {
+    font-size: 2rem;
+  }
+`;
+
+const ZoneSubtitle = styled.p`
+  font-size: 1.2rem;
+  color: #b0b0b0;
+  max-width: 600px;
+  margin: 0 auto;
+`;
+
+const GamesGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  max-width: 1200px;
+  margin: 0 auto 3rem auto;
+`;
+
+const GameCard = styled.div<{ enabled: boolean }>`
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 15px;
+  padding: 2rem;
+  text-align: center;
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  transition: all 0.3s ease;
+  opacity: ${props => props.enabled ? 1 : 0.6};
+  cursor: ${props => props.enabled ? 'pointer' : 'not-allowed'};
+
+  &:hover {
+    transform: ${props => props.enabled ? 'translateY(-5px)' : 'none'};
+    box-shadow: ${props => props.enabled ? '0 10px 30px rgba(0, 255, 255, 0.3)' : 'none'};
+    border-color: ${props => props.enabled ? 'rgba(0, 255, 255, 0.6)' : 'rgba(0, 255, 255, 0.3)'};
+  }
+`;
+
+const GameIcon = styled.div`
+  font-size: 4rem;
+  margin-bottom: 1rem;
+`;
+
+const GameTitle = styled.h3`
+  color: #00ffff;
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+`;
+
+const GameDescription = styled.p`
+  color: #b0b0b0;
+  line-height: 1.5;
+  margin-bottom: 2rem;
+`;
+
+const PlayButton = styled.button<{ enabled: boolean }>`
+  background: ${props => props.enabled 
+    ? 'linear-gradient(45deg, #00ffff, #0099cc)' 
+    : 'linear-gradient(45deg, #666, #444)'};
+  border: none;
+  color: white;
+  padding: 0.8rem 2rem;
+  border-radius: 25px;
+  font-family: 'Orbitron', monospace;
+  font-weight: 600;
+  cursor: ${props => props.enabled ? 'pointer' : 'not-allowed'};
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+
+  &:hover {
+    transform: ${props => props.enabled ? 'translateY(-2px)' : 'none'};
+    box-shadow: ${props => props.enabled ? '0 5px 15px rgba(0, 255, 255, 0.5)' : 'none'};
+  }
+`;
+
+const DemoNotice = styled.div`
+  background: rgba(255, 152, 0, 0.2);
+  border: 1px solid #ff9800;
+  border-radius: 10px;
+  padding: 1rem;
+  margin: 2rem auto;
+  text-align: center;
+  max-width: 600px;
+  
+  h3 {
+    color: #ff9800;
+    margin: 0 0 0.5rem 0;
+  }
+  
+  p {
+    margin: 0;
+    color: #ffcc80;
+  }
+`;
+
+// Game Data Interface
+interface GameData {
+  id: string;
+  title: string;
+  icon: string;
+  description: string;
+  path: string;
+  enabled: boolean;
+  requiresProduction?: boolean;
+}
+
+const SingleplayerZone: React.FC = () => {
+  const navigate = useNavigate();
+  const { mode } = useModeDetection();
+
+  // Game Configuration based on Mode
+  const singleplayerGames: GameData[] = [
+    {
+      id: 'snake',
+      title: 'Snake Game',
+      icon: '🐍',
+      description: 'Classic snake game - grow your snake by eating food while avoiding walls and yourself.',
+      path: '/games/singleplayer/snake',
+      enabled: true // Available in all modes
+    },
+    {
+      id: 'tetris',
+      title: 'Tetris',
+      icon: '🧩',
+      description: 'The legendary puzzle game - arrange falling blocks to clear lines and score points.',
+      path: '/games/singleplayer/tetris',
+      enabled: true // Available in all modes
+    },
+    {
+      id: 'memory',
+      title: 'Memory Game',
+      icon: '🧠',
+      description: 'Test your memory by matching pairs of cards in this classic concentration game.',
+      path: '/games/singleplayer/memory',
+      enabled: true
+    },
+    {
+      id: 'pong',
+      title: 'Pong Game',
+      icon: '🏓',
+      description: 'Classic pong game - control your paddle to hit the ball and score against the computer.',
+      path: '/games/singleplayer/pong',
+      enabled: true // Available in all modes
+    },
+    {
+      id: 'puzzle',
+      title: 'Puzzle Games',
+      icon: '🧩',
+      description: 'Collection of brain-teasing puzzle games including sliding puzzles and logic games.',
+      path: '/games/singleplayer/puzzle',
+      enabled: mode === 'production', // Production only
+      requiresProduction: true
+    },
+    {
+      id: 'quiz',
+      title: 'Quiz Games',
+      icon: '❓',
+      description: 'Challenge your knowledge with various quiz categories and difficulty levels.',
+      path: '/games/singleplayer/quiz',
+      enabled: mode === 'production', // Production only
+      requiresProduction: true
+    }
+  ];
+
+  const handleGameClick = (game: GameData) => {
+    if (game.enabled) {
+      console.log(`🎮 Starting ${game.title}`);
+      navigate(game.path);
+    } else {
+      console.log(`🚫 ${game.title} not available in ${mode} mode`);
+    }
+  };
+
+  const availableGames = singleplayerGames.filter(game => 
+    mode === 'production' || !game.requiresProduction
+  );
+
+  const disabledGames = singleplayerGames.filter(game => 
+    mode !== 'production' && game.requiresProduction
+  );
+
+  return (
+    <ZoneContainer>
+      {/* Zone Header */}
+      <ZoneHeader>
+        <ZoneTitle>🎲 SINGLEPLAYER ZONE</ZoneTitle>
+        <ZoneSubtitle>
+          Challenge yourself with classic single-player games. Perfect your skills and beat your high scores!
+        </ZoneSubtitle>
+      </ZoneHeader>
+
+      {/* Available Games */}
+      <GamesGrid>
+        {availableGames.map(game => (
+          <GameCard
+            key={game.id}
+            enabled={game.enabled}
+            onClick={() => handleGameClick(game)}
+          >
+            <GameIcon>{game.icon}</GameIcon>
+            <GameTitle>{game.title}</GameTitle>
+            <GameDescription>{game.description}</GameDescription>
+            <PlayButton
+              enabled={game.enabled}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleGameClick(game);
+              }}
+            >
+              {game.enabled ? 'Play Now' : 'Unavailable'}
+            </PlayButton>
+          </GameCard>
+        ))}
+      </GamesGrid>
+
+      {/* Disabled Games (Production Only) */}
+      {disabledGames.length > 0 && (
+        <>
+          <ZoneHeader>
+            <h2 style={{ color: '#ff9800', fontSize: '1.5rem' }}>🔒 Premium Games</h2>
+            <p style={{ color: '#ffcc80', fontSize: '1rem' }}>
+              Available in Production Mode
+            </p>
+          </ZoneHeader>
+          
+          <GamesGrid>
+            {disabledGames.map(game => (
+              <GameCard
+                key={game.id}
+                enabled={false}
+              >
+                <GameIcon>{game.icon}</GameIcon>
+                <GameTitle>{game.title}</GameTitle>
+                <GameDescription>{game.description}</GameDescription>
+                <PlayButton enabled={false}>
+                  Premium Only
+                </PlayButton>
+              </GameCard>
+            ))}
+          </GamesGrid>
+        </>
+      )}
+
+      {/* Demo Mode Notice */}
+      {mode === 'demo' && (
+        <DemoNotice>
+          <h3>🚫 Demo Mode Limitations</h3>
+          <p>
+            Some games are not available in Demo Mode. 
+            Upgrade to Production Mode to access all singleplayer games and save your progress!
+          </p>
+        </DemoNotice>
+      )}
+
+      {/* Navigation */}
+      <GameNavigation {...GameNavigationPresets.gameZone('Singleplayer Zone')} />
+    </ZoneContainer>
+  );
+};
+
+export default SingleplayerZone;
+

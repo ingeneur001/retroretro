@@ -1,0 +1,187 @@
+{
+  "timestamp": "2025-08-04T16:11:02.117391",
+  "backend_health": {
+    "basic_connection": {
+      "status": "FAIL",
+      "status_code": 404,
+      "response_time": 0.00418,
+      "data": null
+    },
+    "health_endpoint": {
+      "status": "PASS",
+      "status_code": 200,
+      "response_time": 0.000666,
+      "data": {
+        "status": "OK",
+        "uptime": 5883,
+        "version": "1.0.0",
+        "timestamp": "2025-08-04T14:11:02.128Z",
+        "connectedUsers": 0,
+        "port": "3001",
+        "socketio": "repaired",
+        "note": "Socket.IO fixed for stability"
+      }
+    },
+    "api_status": {
+      "status": "PASS",
+      "status_code": 200,
+      "response_time": 0.00049,
+      "data": {
+        "server": "Legal Retro Gaming Service",
+        "status": "running",
+        "users": 0,
+        "uptime": 5883,
+        "database": true,
+        "socketio": "stable",
+        "features": [
+          "multiplayer",
+          "user-accounts",
+          "score-tracking"
+        ]
+      }
+    },
+    "database_health": {
+      "status": "PASS",
+      "status_code": 200,
+      "response_time": 0.032658,
+      "data": {
+        "status": "database-check",
+        "databases": {
+          "postgresql": "connected",
+          "redis": "connected"
+        },
+        "features": {
+          "userManagement": true,
+          "sessionManagement": true,
+          "scoreTracking": true
+        },
+        "timestamp": "2025-08-04T14:11:02.162Z"
+      }
+    }
+  },
+  "database": {},
+  "authentication": {
+    "registration": {
+      "status": "PASS",
+      "status_code": 200,
+      "test_user": "testuser_1754316662"
+    },
+    "login": {
+      "status": "FAIL",
+      "status_code": 404
+    }
+  },
+  "api_endpoints": {
+    "games_list": {
+      "status": "PASS",
+      "status_code": 200,
+      "path": "/api/games",
+      "response_time": 0.003305
+    },
+    "leaderboard": {
+      "status": "PASS",
+      "status_code": 200,
+      "path": "/api/leaderboard",
+      "response_time": 0.00277
+    },
+    "sessions": {
+      "status": "PASS",
+      "status_code": 200,
+      "path": "/api/sessions",
+      "response_time": 0.001707
+    },
+    "user_stats": {
+      "status": "FAIL",
+      "status_code": 404,
+      "path": "/api/user-stats",
+      "response_time": 0.000448
+    },
+    "snake_scores": {
+      "status": "FAIL",
+      "status_code": 404,
+      "path": "/api/games/snake/scores",
+      "response_time": 0.000416
+    },
+    "memory_scores": {
+      "status": "FAIL",
+      "status_code": 404,
+      "path": "/api/games/memory/scores",
+      "response_time": 0.00051
+    },
+    "pong_scores": {
+      "status": "FAIL",
+      "status_code": 404,
+      "path": "/api/games/pong/scores",
+      "response_time": 0.000511
+    },
+    "profile": {
+      "status": "FAIL",
+      "status_code": 404,
+      "path": "/api/profile",
+      "response_time": 0.000538
+    },
+    "logout": {
+      "status": "FAIL",
+      "status_code": 404,
+      "path": "/api/logout",
+      "response_time": 0.000448
+    }
+  },
+  "websocket": {
+    "connection": "FAIL",
+    "error": "SimpleClient.connect() got an unexpected keyword argument 'timeout'"
+  },
+  "games": {
+    "snake": {
+      "scores_api": {
+        "status": "FAIL",
+        "status_code": 404
+      },
+      "config_api": {
+        "status": "FAIL",
+        "status_code": 404
+      }
+    },
+    "memory": {
+      "scores_api": {
+        "status": "FAIL",
+        "status_code": 404
+      },
+      "config_api": {
+        "status": "FAIL",
+        "status_code": 404
+      }
+    },
+    "pong": {
+      "scores_api": {
+        "status": "FAIL",
+        "status_code": 404
+      },
+      "config_api": {
+        "status": "FAIL",
+        "status_code": 404
+      }
+    },
+    "tetris": {
+      "scores_api": {
+        "status": "FAIL",
+        "status_code": 404
+      },
+      "config_api": {
+        "status": "FAIL",
+        "status_code": 404
+      }
+    }
+  },
+  "multiplayer": {},
+  "performance": {
+    "concurrent_requests": {
+      "total_requests": 10,
+      "successful_requests": 10,
+      "success_rate": 100.0,
+      "total_time": 0.1827678680419922,
+      "avg_response_time": 0.024527645111083983
+    }
+  },
+  "summary": {}
+}

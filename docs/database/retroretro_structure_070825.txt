@@ -1,0 +1,559 @@
+====================================================================================================
+RETRO GAMING SERVICE - SMART PROJECT STRUCTURE ANALYSIS
+Generated: 2025-08-07 21:18:27
+Root Path: D:\Claude_Scripte\RetroRetro\legal-retro-gaming-service
+🧠 Smart Analysis: File Criticality & Purpose Identification
+====================================================================================================
+
+CRITICALITY LEGEND:
+--------------------------------------------------
+🔴 CRITICAL  - Essential for application functionality
+🟠 HIGH      - Important features & core logic
+🟡 MEDIUM    - Supporting functionality
+🟢 LOW       - Optional, documentation, generated files
+❓ UNCLEAR   - Purpose unclear, needs investigation
+
+SMART PROJECT STRUCTURE (TABLE FORMAT):
+----------------------------------------------------------------------------------------------------------------------------------
+FILE/DIRECTORY                                     │ CRITICALITY     │ PURPOSE                                                     
+──────────────────────────────────────────────────┼───────────────┼────────────────────────────────────────────────────────────
+📁 .github/                                         │ ❓ UNCLEAR       │ ❓ Directory purpose unclear
+  📁 ISSUE_TEMPLATE/                                │ ❓ UNCLEAR       │ ❓ Directory purpose unclear
+    📄 bug_report.yml (3.00 B)                      │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+       💡 File pattern not recognized: bug_report.yml │                 │ Investigation needed
+    📄 feature_request.yml (3.00 B)                 │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+       💡 File pattern not recognized: feature_request.yml │                 │ Investigation needed
+  📁 workflows/                                     │ ❓ UNCLEAR       │ ❓ Directory purpose unclear
+    📄 ci-cd.yml (879.00 B)                         │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+       💡 File pattern not recognized: ci-cd.yml    │                 │ Investigation needed
+📁 backend/                                         │ 🔴 CRITICAL      │ 🔧 Backend server & API
+  📁 config/                                        │ 🟡 MEDIUM        │ ⚙️ Configuration files
+    📄 database.js (3.32 KB)                        │ 🔴 CRITICAL      │ Database connection setup
+    📄 jwt.js (3.32 KB)                             │ 🔴 CRITICAL      │ Authentication system
+    📄 redis.js (3.00 B)                            │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+       💡 File pattern not recognized: redis.js     │                 │ Investigation needed
+  📁 middleware/                                    │ 🟡 MEDIUM        │ ⚙️ Express middleware functions
+    📄 auth.js (3.00 B)                             │ 🟠 HIGH          │ Authentication system
+  📁 routes/                                        │ 🟠 HIGH          │ 🛤️ API route definitions
+    📄 auth.js (3.00 B)                             │ 🟠 HIGH          │ Authentication system
+  📁 services/                                      │ ❓ UNCLEAR       │ ❓ Directory purpose unclear
+    📄 socketHandler.js (7.54 KB)                   │ 🟠 HIGH          │ Service layer logic
+  📁 src/                                           │ 🔴 CRITICAL      │ 🏗️ Source code (core application)
+    📁 auth/                                        │ ❓ UNCLEAR       │ ❓ Directory purpose unclear
+    📁 database/                                    │ ❓ UNCLEAR       │ ❓ Directory purpose unclear
+      📁 managers/                                  │ ❓ UNCLEAR       │ ❓ Directory purpose unclear
+      📁 models/                                    │ 🟠 HIGH          │ 🗄️ Database models & schemas
+      📄 connection.js (7.39 KB)                    │ 🔴 CRITICAL      │ Database functionality
+      📄 managers.old (19.55 KB)                    │ ❓ UNCLEAR       │ Temporary/backup file
+         💡 May be safe to remove                   │                 │ Investigation needed
+      📄 setup.js (19.27 KB)                        │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+         💡 File pattern not recognized: setup.js   │                 │ Investigation needed
+    📁 game/                                        │ ❓ UNCLEAR       │ ❓ Directory purpose unclear
+    📁 hooks/                                       │ ❓ UNCLEAR       │ ❓ Directory purpose unclear
+      📄 useSocket.js (0.00 B)                      │ 🟠 HIGH          │ Real-time communication
+    📁 i18n/                                        │ ❓ UNCLEAR       │ ❓ Directory purpose unclear
+    📁 middelware/                                  │ ❓ UNCLEAR       │ ❓ Directory purpose unclear
+      📄 roles.js (0.00 B)                          │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+         💡 File pattern not recognized: roles.js   │                 │ Investigation needed
+    📁 models/                                      │ 🟠 HIGH          │ 🗄️ Database models & schemas
+      📄 Game.js (0.00 B)                           │ 🟠 HIGH          │ Database model
+    📁 payment/                                     │ ❓ UNCLEAR       │ ❓ Directory purpose unclear
+    📁 routes/                                      │ 🟠 HIGH          │ 🛤️ API route definitions
+      📄 auth.js (0.00 B)                           │ 🟠 HIGH          │ Authentication system
+      📄 users.js (0.00 B)                          │ 🟠 HIGH          │ API route handler
+    📁 services/                                    │ ❓ UNCLEAR       │ ❓ Directory purpose unclear
+      📄 gameService.js (0.00 B)                    │ 🟠 HIGH          │ Service layer logic
+      📄 userService.js (0.00 B)                    │ 🟠 HIGH          │ Service layer logic
+    📁 socket/                                      │ ❓ UNCLEAR       │ ❓ Directory purpose unclear
+      📄 GameRoomManager.js (7.02 KB)               │ 🟠 HIGH          │ Game functionality
+      📄 MultiplayerSocketHandler.js (22.10 KB)     │ 🟠 HIGH          │ Game functionality
+    📄 app.js (13.25 KB)                            │ 🔴 CRITICAL      │ Main application entry point
+    📄 backend_src.txt (1.39 KB)                    │ 🟢 LOW           │ Documentation
+  📁 utils/                                         │ 🟡 MEDIUM        │ 🔧 Utility functions & helpers
+    📄 logger.js (3.00 B)                           │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+       💡 File pattern not recognized: logger.js    │                 │ Investigation needed
+  📄 .env (991.00 B)                                │ 🔴 CRITICAL      │ Environment configuration
+  📄 express_only_test.js (324.00 B)                │ 🟢 LOW           │ Test file
+  📄 minimal_server.js (6.28 KB)                    │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+     💡 File pattern not recognized: minimal_server.js │                 │ Investigation needed
+  📄 package-lock.json (69.16 KB)                   │ 🟢 LOW           │ Dependency lock file
+  📄 package.json (890.00 B)                        │ 🔴 CRITICAL      │ Project dependencies & metadata
+  📄 pure_http_test.js (588.00 B)                   │ 🟢 LOW           │ Test file
+  📄 server.js (59.05 KB)                           │ 🔴 CRITICAL      │ Server configuration & startup
+  📄 server.js.backup-20250807_144252 (36.81 KB)    │ 🔴 CRITICAL      │ Server configuration & startup
+  📄 server.js.bak (58.98 KB)                       │ 🔴 CRITICAL      │ Server configuration & startup
+  📄 server.js.old (21.64 KB)                       │ 🔴 CRITICAL      │ Server configuration & startup
+📁 docs/                                            │ 🟢 LOW           │ 📚 Documentation files
+  📁 api/                                           │ ❓ UNCLEAR       │ ❓ Directory purpose unclear
+  📁 database/                                      │ ❓ UNCLEAR       │ ❓ Directory purpose unclear
+    📄 database_completion_doc.md (3.10 KB)         │ 🔴 CRITICAL      │ Database functionality
+    📄 database_setup_guid.md (1.77 KB)             │ 🔴 CRITICAL      │ Database functionality
+    📄 retroretro_structure_070825.txt (0.00 B)     │ 🟢 LOW           │ Documentation
+  📁 development/                                   │ ❓ UNCLEAR       │ ❓ Directory purpose unclear
+    📄 completed_items.json (476.00 B)              │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+       💡 File pattern not recognized: completed_items.json │                 │ Investigation needed
+    📄 critical-tasks.md (491.00 B)                 │ 🟢 LOW           │ Documentation
+    📄 DEVELOPMENT.json (6.99 KB)                   │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+       💡 File pattern not recognized: development.json │                 │ Investigation needed
+    📄 progress-tracker.md (1.95 KB)                │ 🟢 LOW           │ Documentation
+    📄 progress.json (14.79 KB)                     │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+       💡 File pattern not recognized: progress.json │                 │ Investigation needed
+    📄 progress.json.backup (9.11 KB)               │ ❓ UNCLEAR       │ Temporary/backup file
+       💡 May be safe to remove                     │                 │ Investigation needed
+    📄 progress.json.bak (16.00 B)                  │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+       💡 File pattern not recognized: progress.json.bak │                 │ Investigation needed
+    📄 progress.json.old (6.04 KB)                  │ ❓ UNCLEAR       │ Temporary/backup file
+       💡 May be safe to remove                     │                 │ Investigation needed
+    📄 progress_backup.json (9.95 KB)               │ ❓ UNCLEAR       │ Temporary/backup file
+       💡 May be safe to remove                     │                 │ Investigation needed
+    📄 project_analysis_010825.md (4.80 KB)         │ 🟢 LOW           │ Documentation
+    📄 project_analysis_040825.md (7.31 KB)         │ 🟢 LOW           │ Documentation
+    📄 task_overview_tracker_040825.md (8.81 KB)    │ 🟢 LOW           │ Documentation
+    📄 WEEKLY_REPORT.md (1.16 KB)                   │ 🟢 LOW           │ Documentation
+  📁 testing/                                       │ ❓ UNCLEAR       │ ❓ Directory purpose unclear
+    📄 latest_test_integration.json (548.00 B)      │ 🟠 HIGH          │ Real-time communication
+    📄 test_report_20250804_1611.md (1.17 KB)       │ 🟢 LOW           │ Test file
+    📄 test_report_20250805_2029.md (1.17 KB)       │ 🟢 LOW           │ Test file
+    📄 test_results_20250804_1524.json (2.99 KB)    │ 🟢 LOW           │ Test file
+    📄 test_results_20250804_1611.json (4.29 KB)    │ 🟢 LOW           │ Test file
+    📄 test_results_20250804_1855.json (2.99 KB)    │ 🟢 LOW           │ Test file
+    📄 test_results_20250804_1856.json (2.99 KB)    │ 🟢 LOW           │ Test file
+    📄 test_results_20250805_2024.json (2.33 KB)    │ 🟢 LOW           │ Test file
+    📄 test_results_20250805_2027.json (1.92 KB)    │ 🟢 LOW           │ Test file
+    📄 test_results_20250805_2029.json (4.30 KB)    │ 🟢 LOW           │ Test file
+    📄 test_results_20250805_2032.json (1.92 KB)    │ 🟢 LOW           │ Test file
+  📄 status.md (2.45 KB)                            │ 🟢 LOW           │ Documentation
+📁 frontend/                                        │ 🔴 CRITICAL      │ 🖥️ Frontend React application
+  📁 public/                                        │ 🟡 MEDIUM        │ 🌐 Static assets (CSS, images)
+    📄 favicon.ico (3.78 KB)                        │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+       💡 File pattern not recognized: favicon.ico  │                 │ Investigation needed
+    📄 index.html (972.00 B)                        │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+       💡 File pattern not recognized: index.html   │                 │ Investigation needed
+    📄 index.html.bak (1.68 KB)                     │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+       💡 File pattern not recognized: index.html.bak │                 │ Investigation needed
+    📄 logo192.png (5.22 KB)                        │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+       💡 File pattern not recognized: logo192.png  │                 │ Investigation needed
+    📄 logo512.png (9.44 KB)                        │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+       💡 File pattern not recognized: logo512.png  │                 │ Investigation needed
+    📄 manifest.json (492.00 B)                     │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+       💡 File pattern not recognized: manifest.json │                 │ Investigation needed
+    📄 memory_game.html (14.15 KB)                  │ 🟠 HIGH          │ Game functionality
+    📄 robots.txt (67.00 B)                         │ 🟢 LOW           │ Documentation
+  📁 src/                                           │ 🔴 CRITICAL      │ 🏗️ Source code (core application)
+    📁 components/                                  │ ❓ UNCLEAR       │ ❓ Directory purpose unclear
+      📁 games/                                     │ ❓ UNCLEAR       │ ❓ Directory purpose unclear
+      📁 multiplayer/                               │ ❓ UNCLEAR       │ ❓ Directory purpose unclear
+      📁 user/                                      │ ❓ UNCLEAR       │ ❓ Directory purpose unclear
+      📄 ConnectionStatus.tsx (3.61 KB)             │ 🔴 CRITICAL      │ Database functionality
+      📄 GameCard.tsx (3.71 KB)                     │ 🟠 HIGH          │ Game functionality
+      📄 GameCard.tsx.bak (2.39 KB)                 │ 🟠 HIGH          │ Game functionality
+      📄 GameDashboard.js (16.48 KB)                │ 🟠 HIGH          │ Game functionality
+      📄 GameGrid.tsx (2.18 KB)                     │ 🟠 HIGH          │ Game functionality
+      📄 GamePlayer.tsx (8.55 KB)                   │ 🟠 HIGH          │ Game functionality
+      📄 Header.tsx (3.17 KB)                       │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+         💡 File pattern not recognized: header.tsx │                 │ Investigation needed
+      📄 ServerStatus.tsx (2.74 KB)                 │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+         💡 File pattern not recognized: serverstatus.tsx │                 │ Investigation needed
+    📁 hooks/                                       │ ❓ UNCLEAR       │ ❓ Directory purpose unclear
+      📄 useMultiplayerSocket.js (9.57 KB)          │ 🟠 HIGH          │ Game functionality
+      📄 useMultiplayerSocket.js.bak (0.00 B)       │ 🟠 HIGH          │ Game functionality
+      📄 useMultiplayerSocket.tsx.bak (17.57 KB)    │ 🟠 HIGH          │ Game functionality
+      📄 useSocket.js (9.05 KB)                     │ 🟠 HIGH          │ Real-time communication
+    📁 services/                                    │ ❓ UNCLEAR       │ ❓ Directory purpose unclear
+      📄 SocketService.js (13.28 KB)                │ 🟠 HIGH          │ Service layer logic
+    📁 types/                                       │ ❓ UNCLEAR       │ ❓ Directory purpose unclear
+      📄 multiplayer.ts (2.00 KB)                   │ 🟠 HIGH          │ Game functionality
+      📄 multiplayer.ts.bak (1.75 KB)               │ 🟠 HIGH          │ Game functionality
+    📄 App..js (8.64 KB)                            │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+       💡 File pattern not recognized: app..js      │                 │ Investigation needed
+    📄 App.css (564.00 B)                           │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+       💡 File pattern not recognized: app.css      │                 │ Investigation needed
+    📄 App.test.tsx (273.00 B)                      │ 🟢 LOW           │ Test file
+    📄 App.tsx (23.83 KB)                           │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+       💡 File pattern not recognized: app.tsx      │                 │ Investigation needed
+    📄 App.tsx.060825 (11.43 KB)                    │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+       💡 File pattern not recognized: app.tsx.060825 │                 │ Investigation needed
+    📄 App.tsx.bak (22.47 KB)                       │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+       💡 File pattern not recognized: app.tsx.bak  │                 │ Investigation needed
+    📄 App.tsx.old (8.87 KB)                        │ ❓ UNCLEAR       │ Temporary/backup file
+       💡 May be safe to remove                     │                 │ Investigation needed
+    📄 index.css (366.00 B)                         │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+       💡 File pattern not recognized: index.css    │                 │ Investigation needed
+    📄 index.tsx (846.00 B)                         │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+       💡 File pattern not recognized: index.tsx    │                 │ Investigation needed
+    📄 index.tsx.060825 (8.81 KB)                   │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+       💡 File pattern not recognized: index.tsx.060825 │                 │ Investigation needed
+    📄 index.tsx.bak (554.00 B)                     │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+       💡 File pattern not recognized: index.tsx.bak │                 │ Investigation needed
+    📄 logo.svg (2.57 KB)                           │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+       💡 File pattern not recognized: logo.svg     │                 │ Investigation needed
+    📄 react-app-env.d.ts (41.00 B)                 │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+       💡 File pattern not recognized: react-app-env.d.ts │                 │ Investigation needed
+    📄 reportWebVitals.ts (425.00 B)                │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+       💡 File pattern not recognized: reportwebvitals.ts │                 │ Investigation needed
+    📄 setupTests.ts (241.00 B)                     │ 🟢 LOW           │ Test file
+  📄 .gitignore (310.00 B)                          │ 🟢 LOW           │ Git ignore patterns
+  📄 package-lock.json (659.65 KB)                  │ 🟢 LOW           │ Dependency lock file
+  📄 package.json (1.17 KB)                         │ 🔴 CRITICAL      │ Project dependencies & metadata
+  📄 README.md (2.07 KB)                            │ 🟢 LOW           │ Documentation
+  📄 tsconfig.json (561.00 B)                       │ 🟡 MEDIUM        │ Configuration file
+📁 logs/                                            │ ❓ UNCLEAR       │ ❓ Directory purpose unclear
+📁 scripts/                                         │ 🟢 LOW           │ 📜 Utility scripts & automation
+  📄 backend_only_tester.py (7.55 KB)               │ 🟢 LOW           │ Test file
+  📄 current_status.txt (676.00 B)                  │ 🟢 LOW           │ Documentation
+  📄 daily_standup.py.bak (28.60 KB)                │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+     💡 File pattern not recognized: daily_standup.py.bak │                 │ Investigation needed
+  📄 daily_tracker.py (12.63 KB)                    │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+     💡 File pattern not recognized: daily_tracker.py │                 │ Investigation needed
+  📄 db_test.js (4.12 KB)                           │ 🔴 CRITICAL      │ Database functionality
+  📄 dump.rdb (95.00 B)                             │ 🔴 CRITICAL      │ Database functionality
+  📄 gaming_monitor.log (1.42 KB)                   │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+     💡 File pattern not recognized: gaming_monitor.log │                 │ Investigation needed
+  📄 local-backup.bat (1.19 KB)                     │ ❓ UNCLEAR       │ Temporary/backup file
+     💡 May be safe to remove                       │                 │ Investigation needed
+  📄 minimal_backend_tester.py (9.32 KB)            │ 🟢 LOW           │ Test file
+  📄 monitor.py (33.61 KB)                          │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+     💡 File pattern not recognized: monitor.py     │                 │ Investigation needed
+  📄 port_test_results.json (4.58 KB)               │ 🟢 LOW           │ Test file
+  📄 port_tester.py (40.58 KB)                      │ 🟢 LOW           │ Test file
+  📄 progress_tracker.py (59.31 KB)                 │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+     💡 File pattern not recognized: progress_tracker.py │                 │ Investigation needed
+  📄 progress_tracker_update.py (16.02 KB)          │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+     💡 File pattern not recognized: progress_tracker_update.py │                 │ Investigation needed
+  📄 retroretro_scripts.py (21.40 KB)               │ 🟡 MEDIUM        │ Automation script
+  📄 retroretro_structure.py (31.06 KB)             │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+     💡 File pattern not recognized: retroretro_structure.py │                 │ Investigation needed
+  📄 simple_portclear.py (5.16 KB)                  │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+     💡 File pattern not recognized: simple_portclear.py │                 │ Investigation needed
+  📄 test_platform.py (39.42 KB)                    │ 🟢 LOW           │ Test file
+  📄 working_launcher.old (10.75 KB)                │ ❓ UNCLEAR       │ Temporary/backup file
+     💡 May be safe to remove                       │                 │ Investigation needed
+📁 tests/                                           │ 🟢 LOW           │ 🧪 Test files & test suites
+  📁 integration/                                   │ ❓ UNCLEAR       │ ❓ Directory purpose unclear
+📁 uploads/                                         │ ❓ UNCLEAR       │ ❓ Directory purpose unclear
+📄 .env.example (3.00 B)                            │ 🔴 CRITICAL      │ Environment configuration
+📄 .gitignore (446.00 B)                            │ 🟢 LOW           │ Git ignore patterns
+📄 .gitignore.bak (148.00 B)                        │ 🟢 LOW           │ Git ignore patterns
+📄 CONTRIBUTING.md (3.00 B)                         │ 🟢 LOW           │ Documentation
+📄 deploy_github_current.py (14.94 KB)              │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+   💡 File pattern not recognized: deploy_github_current.py │                 │ Investigation needed
+📄 docker-compose.yml (2.30 KB)                     │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+   💡 File pattern not recognized: docker-compose.yml │                 │ Investigation needed
+📄 fix_retroretro_server.js (4.20 KB)               │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+   💡 File pattern not recognized: fix_retroretro_server.js │                 │ Investigation needed
+📄 fix_typescript_errors.js (7.81 KB)               │ 🟡 MEDIUM        │ Automation script
+📄 LICENSE (3.00 B)                                 │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+   💡 File pattern not recognized: license          │                 │ Investigation needed
+📄 package-lock.json (55.56 KB)                     │ 🟢 LOW           │ Dependency lock file
+📄 package.json (495.00 B)                          │ 🔴 CRITICAL      │ Project dependencies & metadata
+📄 project_structure_check.json (2.36 KB)           │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+   💡 File pattern not recognized: project_structure_check.json │                 │ Investigation needed
+📄 README.md (3.00 B)                               │ 🟢 LOW           │ Documentation
+📄 RetroRetro_Start.py (22.77 KB)                   │ ❓ UNCLEAR       │ Unknown purpose - needs analysis
+   💡 File pattern not recognized: retroretro_start.py │                 │ Investigation needed
+
+====================================================================================================
+TREE-STYLE STRUCTURE (Alternative View):
+====================================================================================================
+├── .github/ [❓ UNCLEAR]
+│   ├── ISSUE_TEMPLATE/ [❓ UNCLEAR]
+│   │   ├── bug_report.yml (3.00 B) [❓ UNCLEAR]
+│   │   ├── feature_request.yml (3.00 B) [❓ UNCLEAR]
+│   ├── workflows/ [❓ UNCLEAR]
+│   │   ├── ci-cd.yml (879.00 B) [❓ UNCLEAR]
+├── backend/ [🔴 CRITICAL]
+│   ├── config/ [🟡 MEDIUM]
+│   │   ├── database.js (3.32 KB) [🔴 CRITICAL]
+│   │   ├── jwt.js (3.32 KB) [🔴 CRITICAL]
+│   │   ├── redis.js (3.00 B) [❓ UNCLEAR]
+│   ├── middleware/ [🟡 MEDIUM]
+│   │   ├── auth.js (3.00 B) [🟠 HIGH]
+│   ├── routes/ [🟠 HIGH]
+│   │   ├── auth.js (3.00 B) [🟠 HIGH]
+│   ├── services/ [❓ UNCLEAR]
+│   │   ├── socketHandler.js (7.54 KB) [🟠 HIGH]
+│   ├── src/ [🔴 CRITICAL]
+│   │   ├── auth/ [❓ UNCLEAR]
+│   │   ├── database/ [❓ UNCLEAR]
+│   │   │   ├── managers/ [❓ UNCLEAR]
+│   │   │   ├── models/ [🟠 HIGH]
+│   │   │   ├── connection.js (7.39 KB) [🔴 CRITICAL]
+│   │   │   ├── managers.old (19.55 KB) [❓ UNCLEAR]
+│   │   │   ├── setup.js (19.27 KB) [❓ UNCLEAR]
+│   │   ├── game/ [❓ UNCLEAR]
+│   │   ├── hooks/ [❓ UNCLEAR]
+│   │   │   ├── useSocket.js (0.00 B) [🟠 HIGH]
+│   │   ├── i18n/ [❓ UNCLEAR]
+│   │   ├── middelware/ [❓ UNCLEAR]
+│   │   │   ├── roles.js (0.00 B) [❓ UNCLEAR]
+│   │   ├── models/ [🟠 HIGH]
+│   │   │   ├── Game.js (0.00 B) [🟠 HIGH]
+│   │   ├── payment/ [❓ UNCLEAR]
+│   │   ├── routes/ [🟠 HIGH]
+│   │   │   ├── auth.js (0.00 B) [🟠 HIGH]
+│   │   │   ├── users.js (0.00 B) [🟠 HIGH]
+│   │   ├── services/ [❓ UNCLEAR]
+│   │   │   ├── gameService.js (0.00 B) [🟠 HIGH]
+│   │   │   ├── userService.js (0.00 B) [🟠 HIGH]
+│   │   ├── socket/ [❓ UNCLEAR]
+│   │   │   ├── GameRoomManager.js (7.02 KB) [🟠 HIGH]
+│   │   │   ├── MultiplayerSocketHandler.js (22.10 KB) [🟠 HIGH]
+│   │   ├── app.js (13.25 KB) [🔴 CRITICAL]
+│   │   ├── backend_src.txt (1.39 KB) [🟢 LOW]
+│   ├── utils/ [🟡 MEDIUM]
+│   │   ├── logger.js (3.00 B) [❓ UNCLEAR]
+│   ├── .env (991.00 B) [🔴 CRITICAL]
+│   ├── express_only_test.js (324.00 B) [🟢 LOW]
+│   ├── minimal_server.js (6.28 KB) [❓ UNCLEAR]
+│   ├── package-lock.json (69.16 KB) [🟢 LOW]
+│   ├── package.json (890.00 B) [🔴 CRITICAL]
+│   ├── pure_http_test.js (588.00 B) [🟢 LOW]
+│   ├── server.js (59.05 KB) [🔴 CRITICAL]
+│   ├── server.js.backup-20250807_144252 (36.81 KB) [🔴 CRITICAL]
+│   ├── server.js.bak (58.98 KB) [🔴 CRITICAL]
+│   ├── server.js.old (21.64 KB) [🔴 CRITICAL]
+├── docs/ [🟢 LOW]
+│   ├── api/ [❓ UNCLEAR]
+│   ├── database/ [❓ UNCLEAR]
+│   │   ├── database_completion_doc.md (3.10 KB) [🔴 CRITICAL]
+│   │   ├── database_setup_guid.md (1.77 KB) [🔴 CRITICAL]
+│   │   ├── retroretro_structure_070825.txt (24.11 KB) [🟢 LOW]
+│   ├── development/ [❓ UNCLEAR]
+│   │   ├── completed_items.json (476.00 B) [❓ UNCLEAR]
+│   │   ├── critical-tasks.md (491.00 B) [🟢 LOW]
+│   │   ├── DEVELOPMENT.json (6.99 KB) [❓ UNCLEAR]
+│   │   ├── progress-tracker.md (1.95 KB) [🟢 LOW]
+│   │   ├── progress.json (14.79 KB) [❓ UNCLEAR]
+│   │   ├── progress.json.backup (9.11 KB) [❓ UNCLEAR]
+│   │   ├── progress.json.bak (16.00 B) [❓ UNCLEAR]
+│   │   ├── progress.json.old (6.04 KB) [❓ UNCLEAR]
+│   │   ├── progress_backup.json (9.95 KB) [❓ UNCLEAR]
+│   │   ├── project_analysis_010825.md (4.80 KB) [🟢 LOW]
+│   │   ├── project_analysis_040825.md (7.31 KB) [🟢 LOW]
+│   │   ├── task_overview_tracker_040825.md (8.81 KB) [🟢 LOW]
+│   │   ├── WEEKLY_REPORT.md (1.16 KB) [🟢 LOW]
+│   ├── testing/ [❓ UNCLEAR]
+│   │   ├── latest_test_integration.json (548.00 B) [🟠 HIGH]
+│   │   ├── test_report_20250804_1611.md (1.17 KB) [🟢 LOW]
+│   │   ├── test_report_20250805_2029.md (1.17 KB) [🟢 LOW]
+│   │   ├── test_results_20250804_1524.json (2.99 KB) [🟢 LOW]
+│   │   ├── test_results_20250804_1611.json (4.29 KB) [🟢 LOW]
+│   │   ├── test_results_20250804_1855.json (2.99 KB) [🟢 LOW]
+│   │   ├── test_results_20250804_1856.json (2.99 KB) [🟢 LOW]
+│   │   ├── test_results_20250805_2024.json (2.33 KB) [🟢 LOW]
+│   │   ├── test_results_20250805_2027.json (1.92 KB) [🟢 LOW]
+│   │   ├── test_results_20250805_2029.json (4.30 KB) [🟢 LOW]
+│   │   ├── test_results_20250805_2032.json (1.92 KB) [🟢 LOW]
+│   ├── status.md (2.45 KB) [🟢 LOW]
+├── frontend/ [🔴 CRITICAL]
+│   ├── public/ [🟡 MEDIUM]
+│   │   ├── favicon.ico (3.78 KB) [❓ UNCLEAR]
+│   │   ├── index.html (972.00 B) [❓ UNCLEAR]
+│   │   ├── index.html.bak (1.68 KB) [❓ UNCLEAR]
+│   │   ├── logo192.png (5.22 KB) [❓ UNCLEAR]
+│   │   ├── logo512.png (9.44 KB) [❓ UNCLEAR]
+│   │   ├── manifest.json (492.00 B) [❓ UNCLEAR]
+│   │   ├── memory_game.html (14.15 KB) [🟠 HIGH]
+│   │   ├── robots.txt (67.00 B) [🟢 LOW]
+│   ├── src/ [🔴 CRITICAL]
+│   │   ├── components/ [❓ UNCLEAR]
+│   │   │   ├── games/ [❓ UNCLEAR]
+│   │   │   ├── multiplayer/ [❓ UNCLEAR]
+│   │   │   ├── user/ [❓ UNCLEAR]
+│   │   │   ├── ConnectionStatus.tsx (3.61 KB) [🔴 CRITICAL]
+│   │   │   ├── GameCard.tsx (3.71 KB) [🟠 HIGH]
+│   │   │   ├── GameCard.tsx.bak (2.39 KB) [🟠 HIGH]
+│   │   │   ├── GameDashboard.js (16.48 KB) [🟠 HIGH]
+│   │   │   ├── GameGrid.tsx (2.18 KB) [🟠 HIGH]
+│   │   │   ├── GamePlayer.tsx (8.55 KB) [🟠 HIGH]
+│   │   │   ├── Header.tsx (3.17 KB) [❓ UNCLEAR]
+│   │   │   ├── ServerStatus.tsx (2.74 KB) [❓ UNCLEAR]
+│   │   ├── hooks/ [❓ UNCLEAR]
+│   │   │   ├── useMultiplayerSocket.js (9.57 KB) [🟠 HIGH]
+│   │   │   ├── useMultiplayerSocket.js.bak (0.00 B) [🟠 HIGH]
+│   │   │   ├── useMultiplayerSocket.tsx.bak (17.57 KB) [🟠 HIGH]
+│   │   │   ├── useSocket.js (9.05 KB) [🟠 HIGH]
+│   │   ├── services/ [❓ UNCLEAR]
+│   │   │   ├── SocketService.js (13.28 KB) [🟠 HIGH]
+│   │   ├── types/ [❓ UNCLEAR]
+│   │   │   ├── multiplayer.ts (2.00 KB) [🟠 HIGH]
+│   │   │   ├── multiplayer.ts.bak (1.75 KB) [🟠 HIGH]
+│   │   ├── App..js (8.64 KB) [❓ UNCLEAR]
+│   │   ├── App.css (564.00 B) [❓ UNCLEAR]
+│   │   ├── App.test.tsx (273.00 B) [🟢 LOW]
+│   │   ├── App.tsx (23.83 KB) [❓ UNCLEAR]
+│   │   ├── App.tsx.060825 (11.43 KB) [❓ UNCLEAR]
+│   │   ├── App.tsx.bak (22.47 KB) [❓ UNCLEAR]
+│   │   ├── App.tsx.old (8.87 KB) [❓ UNCLEAR]
+│   │   ├── index.css (366.00 B) [❓ UNCLEAR]
+│   │   ├── index.tsx (846.00 B) [❓ UNCLEAR]
+│   │   ├── index.tsx.060825 (8.81 KB) [❓ UNCLEAR]
+│   │   ├── index.tsx.bak (554.00 B) [❓ UNCLEAR]
+│   │   ├── logo.svg (2.57 KB) [❓ UNCLEAR]
+│   │   ├── react-app-env.d.ts (41.00 B) [❓ UNCLEAR]
+│   │   ├── reportWebVitals.ts (425.00 B) [❓ UNCLEAR]
+│   │   ├── setupTests.ts (241.00 B) [🟢 LOW]
+│   ├── .gitignore (310.00 B) [🟢 LOW]
+│   ├── package-lock.json (659.65 KB) [🟢 LOW]
+│   ├── package.json (1.17 KB) [🔴 CRITICAL]
+│   ├── README.md (2.07 KB) [🟢 LOW]
+│   ├── tsconfig.json (561.00 B) [🟡 MEDIUM]
+├── logs/ [❓ UNCLEAR]
+├── scripts/ [🟢 LOW]
+│   ├── backend_only_tester.py (7.55 KB) [🟢 LOW]
+│   ├── current_status.txt (676.00 B) [🟢 LOW]
+│   ├── daily_standup.py.bak (28.60 KB) [❓ UNCLEAR]
+│   ├── daily_tracker.py (12.63 KB) [❓ UNCLEAR]
+│   ├── db_test.js (4.12 KB) [🔴 CRITICAL]
+│   ├── dump.rdb (95.00 B) [🔴 CRITICAL]
+│   ├── gaming_monitor.log (1.42 KB) [❓ UNCLEAR]
+│   ├── local-backup.bat (1.19 KB) [❓ UNCLEAR]
+│   ├── minimal_backend_tester.py (9.32 KB) [🟢 LOW]
+│   ├── monitor.py (33.61 KB) [❓ UNCLEAR]
+│   ├── port_test_results.json (4.58 KB) [🟢 LOW]
+│   ├── port_tester.py (40.58 KB) [🟢 LOW]
+│   ├── progress_tracker.py (59.31 KB) [❓ UNCLEAR]
+│   ├── progress_tracker_update.py (16.02 KB) [❓ UNCLEAR]
+│   ├── retroretro_scripts.py (21.40 KB) [🟡 MEDIUM]
+│   ├── retroretro_structure.py (31.06 KB) [❓ UNCLEAR]
+│   ├── simple_portclear.py (5.16 KB) [❓ UNCLEAR]
+│   ├── test_platform.py (39.42 KB) [🟢 LOW]
+│   ├── working_launcher.old (10.75 KB) [❓ UNCLEAR]
+├── tests/ [🟢 LOW]
+│   ├── integration/ [❓ UNCLEAR]
+├── uploads/ [❓ UNCLEAR]
+├── .env.example (3.00 B) [🔴 CRITICAL]
+├── .gitignore (446.00 B) [🟢 LOW]
+├── .gitignore.bak (148.00 B) [🟢 LOW]
+├── CONTRIBUTING.md (3.00 B) [🟢 LOW]
+├── deploy_github_current.py (14.94 KB) [❓ UNCLEAR]
+├── docker-compose.yml (2.30 KB) [❓ UNCLEAR]
+├── fix_retroretro_server.js (4.20 KB) [❓ UNCLEAR]
+├── fix_typescript_errors.js (7.81 KB) [🟡 MEDIUM]
+├── LICENSE (3.00 B) [❓ UNCLEAR]
+├── package-lock.json (55.56 KB) [🟢 LOW]
+├── package.json (495.00 B) [🔴 CRITICAL]
+├── project_structure_check.json (2.36 KB) [❓ UNCLEAR]
+├── README.md (3.00 B) [🟢 LOW]
+├── RetroRetro_Start.py (22.77 KB) [❓ UNCLEAR]
+
+==================================================================================================================================
+CRITICALITY SUMMARY - STRUCTURED TABLE
+==================================================================================================================================
+
+┌────────────────────────────────────────────────────────────┬───────────────┬──────────────────────────────────────────────────┐
+│ FILE/DIRECTORY                                               │ CRITICALITY     │ PURPOSE                                            │
+├────────────────────────────────────────────────────────────┼───────────────┼──────────────────────────────────────────────────┤
+│ = 🔴 CRITICAL LEVEL =                                         │                 │                                                    │
+├────────────────────────────────────────────────────────────┼───────────────┼──────────────────────────────────────────────────┤
+│ .env.example                                                 │ 🔴 CRITICAL      │ Environment configuration                          │
+│ package.json                                                 │ 🔴 CRITICAL      │ Project dependencies & metadata                    │
+│ backend\.env                                                 │ 🔴 CRITICAL      │ Environment configuration                          │
+│ backend\package.json                                         │ 🔴 CRITICAL      │ Project dependencies & metadata                    │
+│ backend\server.js                                            │ 🔴 CRITICAL      │ Server configuration & startup                     │
+│ backend\server.js.backup-20250807_144252                     │ 🔴 CRITICAL      │ Server configuration & startup                     │
+│ backend\server.js.bak                                        │ 🔴 CRITICAL      │ Server configuration & startup                     │
+│ backend\server.js.old                                        │ 🔴 CRITICAL      │ Server configuration & startup                     │
+│ backend\config\database.js                                   │ 🔴 CRITICAL      │ Database connection setup                          │
+│ backend\config\jwt.js                                        │ 🔴 CRITICAL      │ Authentication system                              │
+│ backend\src\app.js                                           │ 🔴 CRITICAL      │ Main application entry point                       │
+│ backend\src\database\connection.js                           │ 🔴 CRITICAL      │ Database functionality                             │
+│ backend\src\database\managers\index.js                       │ 🔴 CRITICAL      │ Application entry point                            │
+│ backend\src\database\models\index.js                         │ 🔴 CRITICAL      │ Application entry point                            │
+│ docs\database\database_completion_doc.md                     │ 🔴 CRITICAL      │ Database functionality                             │
+│ ... and 7 more files                                         │                 │                                                    │
+├────────────────────────────────────────────────────────────┼───────────────┼──────────────────────────────────────────────────┤
+│ = 🟠 HIGH LEVEL =                                             │                 │                                                    │
+├────────────────────────────────────────────────────────────┼───────────────┼──────────────────────────────────────────────────┤
+│ backend\middleware\auth.js                                   │ 🟠 HIGH          │ Authentication system                              │
+│ backend\routes\auth.js                                       │ 🟠 HIGH          │ Authentication system                              │
+│ backend\services\socketHandler.js                            │ 🟠 HIGH          │ Service layer logic                                │
+│ backend\src\database\managers\GameSessionManager.js          │ 🟠 HIGH          │ Game functionality                                 │
+│ backend\src\database\models\Game.js                          │ 🟠 HIGH          │ Database model                                     │
+│ backend\src\database\models\Session.js                       │ 🟠 HIGH          │ Database model                                     │
+│ backend\src\database\models\User.js                          │ 🟠 HIGH          │ Database model                                     │
+│ backend\src\hooks\useSocket.js                               │ 🟠 HIGH          │ Real-time communication                            │
+│ backend\src\models\Game.js                                   │ 🟠 HIGH          │ Database model                                     │
+│ backend\src\routes\auth.js                                   │ 🟠 HIGH          │ Authentication system                              │
+│ backend\src\routes\users.js                                  │ 🟠 HIGH          │ API route handler                                  │
+│ backend\src\services\gameService.js                          │ 🟠 HIGH          │ Service layer logic                                │
+│ backend\src\services\userService.js                          │ 🟠 HIGH          │ Service layer logic                                │
+│ backend\src\socket\GameRoomManager.js                        │ 🟠 HIGH          │ Game functionality                                 │
+│ backend\src\socket\MultiplayerSocketHandler.js               │ 🟠 HIGH          │ Game functionality                                 │
+│ ... and 25 more files                                        │                 │                                                    │
+├────────────────────────────────────────────────────────────┼───────────────┼──────────────────────────────────────────────────┤
+│ = 🟡 MEDIUM LEVEL =                                           │                 │                                                    │
+├────────────────────────────────────────────────────────────┼───────────────┼──────────────────────────────────────────────────┤
+│ fix_typescript_errors.js                                     │ 🟡 MEDIUM        │ Automation script                                  │
+│ frontend\tsconfig.json                                       │ 🟡 MEDIUM        │ Configuration file                                 │
+│ scripts\retroretro_scripts.py                                │ 🟡 MEDIUM        │ Automation script                                  │
+├────────────────────────────────────────────────────────────┼───────────────┼──────────────────────────────────────────────────┤
+│ = 🟢 LOW LEVEL =                                              │                 │                                                    │
+├────────────────────────────────────────────────────────────┼───────────────┼──────────────────────────────────────────────────┤
+│ .gitignore                                                   │ 🟢 LOW           │ Git ignore patterns                                │
+│ .gitignore.bak                                               │ 🟢 LOW           │ Git ignore patterns                                │
+│ CONTRIBUTING.md                                              │ 🟢 LOW           │ Documentation                                      │
+│ package-lock.json                                            │ 🟢 LOW           │ Dependency lock file                               │
+│ README.md                                                    │ 🟢 LOW           │ Documentation                                      │
+│ backend\express_only_test.js                                 │ 🟢 LOW           │ Test file                                          │
+│ backend\package-lock.json                                    │ 🟢 LOW           │ Dependency lock file                               │
+│ backend\pure_http_test.js                                    │ 🟢 LOW           │ Test file                                          │
+│ backend\src\backend_src.txt                                  │ 🟢 LOW           │ Documentation                                      │
+│ docs\status.md                                               │ 🟢 LOW           │ Documentation                                      │
+│ docs\database\retroretro_structure_070825.txt                │ 🟢 LOW           │ Documentation                                      │
+│ docs\development\critical-tasks.md                           │ 🟢 LOW           │ Documentation                                      │
+│ docs\development\progress-tracker.md                         │ 🟢 LOW           │ Documentation                                      │
+│ docs\development\project_analysis_010825.md                  │ 🟢 LOW           │ Documentation                                      │
+│ docs\development\project_analysis_040825.md                  │ 🟢 LOW           │ Documentation                                      │
+│ ... and 24 more files                                        │                 │                                                    │
+├────────────────────────────────────────────────────────────┼───────────────┼──────────────────────────────────────────────────┤
+│ = ❓ UNCLEAR LEVEL =                                          │                 │                                                    │
+├────────────────────────────────────────────────────────────┼───────────────┼──────────────────────────────────────────────────┤
+│ deploy_github_current.py                                     │ ❓ UNCLEAR       │ Unknown purpose - needs analysis                   │
+│ docker-compose.yml                                           │ ❓ UNCLEAR       │ Unknown purpose - needs analysis                   │
+│ fix_retroretro_server.js                                     │ ❓ UNCLEAR       │ Unknown purpose - needs analysis                   │
+│ LICENSE                                                      │ ❓ UNCLEAR       │ Unknown purpose - needs analysis                   │
+│ project_structure_check.json                                 │ ❓ UNCLEAR       │ Unknown purpose - needs analysis                   │
+│ RetroRetro_Start.py                                          │ ❓ UNCLEAR       │ Unknown purpose - needs analysis                   │
+│ .github\ISSUE_TEMPLATE\bug_report.yml                        │ ❓ UNCLEAR       │ Unknown purpose - needs analysis                   │
+│ .github\ISSUE_TEMPLATE\feature_request.yml                   │ ❓ UNCLEAR       │ Unknown purpose - needs analysis                   │
+│ .github\workflows\ci-cd.yml                                  │ ❓ UNCLEAR       │ Unknown purpose - needs analysis                   │
+│ backend\minimal_server.js                                    │ ❓ UNCLEAR       │ Unknown purpose - needs analysis                   │
+│ backend\config\redis.js                                      │ ❓ UNCLEAR       │ Unknown purpose - needs analysis                   │
+│ backend\src\database\managers.old                            │ ❓ UNCLEAR       │ Temporary/backup file                              │
+│ backend\src\database\setup.js                                │ ❓ UNCLEAR       │ Unknown purpose - needs analysis                   │
+│ backend\src\database\managers\UserManager.js                 │ ❓ UNCLEAR       │ Unknown purpose - needs analysis                   │
+│ backend\src\middelware\roles.js                              │ ❓ UNCLEAR       │ Unknown purpose - needs analysis                   │
+│ ... and 42 more files                                        │                 │                                                    │
+└────────────────────────────────────────────────────────────┴───────────────┴──────────────────────────────────────────────────┘
+🧹 CLEANUP RECOMMENDATIONS:
+------------------------------------------------------------
+1. INVESTIGATE 57 unclear files:
+   - deploy_github_current.py: File pattern not recognized: deploy_github_current.py
+   - docker-compose.yml: File pattern not recognized: docker-compose.yml
+   - fix_retroretro_server.js: File pattern not recognized: fix_retroretro_server.js
+   - LICENSE: File pattern not recognized: license
+   - project_structure_check.json: File pattern not recognized: project_structure_check.json
+   - RetroRetro_Start.py: File pattern not recognized: retroretro_start.py
+   - .github\ISSUE_TEMPLATE\bug_report.yml: File pattern not recognized: bug_report.yml
+   - .github\ISSUE_TEMPLATE\feature_request.yml: File pattern not recognized: feature_request.yml
+   - .github\workflows\ci-cd.yml: File pattern not recognized: ci-cd.yml
+   - backend\minimal_server.js: File pattern not recognized: minimal_server.js
+
+2. SAFE TO ARCHIVE (after backup):
+   - Files marked as 'temporary' or 'backup'
+   - Old documentation files
+   - Unused test files
+
+3. CRITICAL FILES TO BACKUP:
+   - .env.example
+   - package.json
+   - backend\.env
+   - backend\package.json
+   - backend\server.js
+   - backend\server.js.backup-20250807_144252
+   - backend\server.js.bak
+   - backend\server.js.old
+   - backend\config\database.js
+   - backend\config\jwt.js
+

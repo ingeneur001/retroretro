@@ -1,0 +1,430 @@
+// ========================================
+// MULTI-USER WEBSOCKET EXTENSION
+// Builds on existing GameSessionManager.js
+// ========================================
+
+// ========================================
+// 1. SOCKET.IO LAYER - backend/src/socket/MultiplayerSocketHandler.js
+// ========================================
+
+const GameSessionManager = require('../database/managers/GameSessionManager');
+
+class MultiplayerSocketHandler {
+    constructor(io) {
+        this.io = io;
+        this.sessionManager = new GameSessionManager();
+        
+        // In-memory tracking for real-time features
+        this.activeSessions = new Map(); // sessionId -> { sockets: Set(), gameState: Object }
+        this.socketToSession = new Map(); // socketId -> sessionId
+        this.playerToSocket = new Map(); // userId -> socketId
+        
+        this.setupSocketHandlers();
+        
+        // Cleanup interval
+        setInterval(() => this.cleanupInactiveSessions(), 30000); // 30 seconds
+    }
+    
+    setupSocketHandlers() {
+        this.io.on('connection', (socket) => {
+            console.log(`🔌 Socket connected: ${socket.id}`);
+            
+            // ================================
+            // SESSION MANAGEMENT
+            // ================================
+            
+            socket.on('create_session', async (data) => {
+                try {
+                    const { gameId, settings, user } = data;
+                    
+                    // Create session in database
+                    const session = await this.sessionManager.createSession(
+                        gameId, 
+                        user.id, 
+                        settings
+                    );
+                    
+                    // Create real-time session tracking
+                    this.activeSessions.set(session.id, {
+                        sockets: new Set([socket.id]),
+                        players: new Map([[user.id, { ...user, socketId: socket.id, isHost: true }]]),
+                        spectators: new Map(),
+                        gameState: null,
+                        lastActivity: new Date()
+                    });
+                    
+                    this.socketToSession.set(socket.id, session.id);
+                    this.playerToSocket.set(user.id, socket.id);
+                    
+                    // Join socket to session room
+                    socket.join(`session_${session.id}`);
+                    
+                    socket.emit('session_created', {
+                        success: true,
+                        session: session,
+                        sessionId: session.id
+                    });
+                    
+                    console.log(`🎮 Session created: ${session.id} by ${user.username}`);
+                    
+                } catch (error) {
+                    console.error('❌ Create session error:', error);
+                    socket.emit('session_created', {
+                        success: false,
+                        error: error.message
+                    });
+                }
+            });
+            
+            socket.on('join_session', async (data) => {
+                try {
+                    const { sessionId, user, asSpectator = false } = data;
+                    
+                    // Join session in database
+                    const joinResult = await this.sessionManager.joinSession(
+                        sessionId, 
+                        user.id, 
+                        socket.id
+                    );
+                    
+                    // Update real-time tracking
+                    let realtimeSession = this.activeSessions.get(sessionId);
+                    if (!realtimeSession) {
+                        // Initialize if not exists
+                        realtimeSession = {
+                            sockets: new Set(),
+                            players: new Map(),
+                            spectators: new Map(),
+                            gameState: null,
+                            lastActivity: new Date()
+                        };
+                        this.activeSessions.set(sessionId, realtimeSession);
+                    }
+                    
+                    realtimeSession.sockets.add(socket.id);
+                    
+                    if (asSpectator) {
+                        realtimeSession.spectators.set(user.id, { ...user, socketId: socket.id });
+                    } else {
+                        realtimeSession.players.set(user.id, { 
+                            ...user, 
+                            socketId: socket.id, 
+                            playerNumber: joinResult.playerNumber,
+                            isHost: false
+                        });
+                    }
+                    
+                    this.socketToSession.set(socket.id, sessionId);
+                    this.playerToSocket.set(user.id, socket.id);
+                    
+                    // Join socket to session room
+                    socket.join(`session_${sessionId}`);
+                    
+                    // Get full session details
+                    const sessionDetails = await this.sessionManager.getSessionDetails(sessionId);
+                    
+                    // Notify player
+                    socket.emit('session_joined', {
+                        success: true,
+                        session: sessionDetails,
+                        playerNumber: joinResult.playerNumber,
+                        reconnected: joinResult.reconnected
+                    });
+                    
+                    // Notify all players in session
+                    socket.to(`session_${sessionId}`).emit('player_joined', {
+                        user: user,
+                        playerNumber: joinResult.playerNumber,
+                        asSpectator: asSpectator,
+                        sessionPlayers: Array.from(realtimeSession.players.values()),
+                        sessionSpectators: Array.from(realtimeSession.spectators.values())
+                    });
+                    
+                    console.log(`👤 ${user.username} joined session ${sessionId} (${asSpectator ? 'spectator' : 'player'})`);
+                    
+                } catch (error) {
+                    console.error('❌ Join session error:', error);
+                    socket.emit('session_joined', {
+                        success: false,
+                        error: error.message
+                    });
+                }
+            });
+            
+            socket.on('leave_session', async () => {
+                await this.handlePlayerLeave(socket);
+            });
+            
+            // ================================
+            // GAME STATE SYNCHRONIZATION
+            // ================================
+            
+            socket.on('game_state_update', async (data) => {
+                try {
+                    const sessionId = this.socketToSession.get(socket.id);
+                    if (!sessionId) return;
+                    
+                    const { gameState, timestamp } = data;
+                    
+                    // Update database
+                    await this.sessionManager.updateGameState(sessionId, gameState);
+                    
+                    // Update real-time tracking
+                    const realtimeSession = this.activeSessions.get(sessionId);
+                    if (realtimeSession) {
+                        realtimeSession.gameState = gameState;
+                        realtimeSession.lastActivity = new Date();
+                    }
+                    
+                    // Broadcast to all players in session (except sender)
+                    socket.to(`session_${sessionId}`).emit('game_state_updated', {
+                        gameState: gameState,
+                        timestamp: timestamp,
+                        from: socket.id
+                    });
+                    
+                } catch (error) {
+                    console.error('❌ Game state update error:', error);
+                }
+            });
+            
+            socket.on('game_action', async (data) => {
+                try {
+                    const sessionId = this.socketToSession.get(socket.id);
+                    if (!sessionId) return;
+                    
+                    // Broadcast action to all players in session (except sender)
+                    socket.to(`session_${sessionId}`).emit('game_action', {
+                        ...data,
+                        from: socket.id,
+                        timestamp: new Date().toISOString()
+                    });
+                    
+                } catch (error) {
+                    console.error('❌ Game action error:', error);
+                }
+            });
+            
+            // ================================
+            // CHAT SYSTEM
+            // ================================
+            
+            socket.on('chat_message', async (data) => {
+                try {
+                    const sessionId = this.socketToSession.get(socket.id);
+                    if (!sessionId) return;
+                    
+                    const { message, user } = data;
+                    const timestamp = new Date().toISOString();
+                    
+                    const chatMessage = {
+                        id: Date.now().toString(),
+                        message: message,
+                        user: user,
+                        timestamp: timestamp,
+                        type: 'player'
+                    };
+                    
+                    // Broadcast to all in session
+                    this.io.to(`session_${sessionId}`).emit('chat_message', chatMessage);
+                    
+                    console.log(`💬 Chat in ${sessionId}: ${user.username}: ${message}`);
+                    
+                } catch (error) {
+                    console.error('❌ Chat message error:', error);
+                }
+            });
+            
+            // ================================
+            // MATCHMAKING
+            // ================================
+            
+            socket.on('quick_match', async (data) => {
+                try {
+                    const { gameSlug, user } = data;
+                    
+                    // Find available session
+                    const availableSessions = await this.sessionManager.getActiveSessions(gameSlug);
+                    const joinableSession = availableSessions.find(session => 
+                        session.session_status === 'waiting' && 
+                        session.current_players < session.max_players
+                    );
+                    
+                    if (joinableSession) {
+                        // Join existing session
+                        socket.emit('quick_match_result', {
+                            success: true,
+                            action: 'join',
+                            sessionId: joinableSession.id
+                        });
+                    } else {
+                        // Create new session
+                        const games = await this.sessionManager.pool.query(
+                            'SELECT id FROM games WHERE slug = $1 AND is_active = true',
+                            [gameSlug]
+                        );
+                        
+                        if (games.rows[0]) {
+                            socket.emit('quick_match_result', {
+                                success: true,
+                                action: 'create',
+                                gameId: games.rows[0].id,
+                                settings: { quickMatch: true }
+                            });
+                        } else {
+                            socket.emit('quick_match_result', {
+                                success: false,
+                                error: 'Game not found'
+                            });
+                        }
+                    }
+                    
+                } catch (error) {
+                    console.error('❌ Quick match error:', error);
+                    socket.emit('quick_match_result', {
+                        success: false,
+                        error: error.message
+                    });
+                }
+            });
+            
+            // ================================
+            // SESSION LISTING
+            // ================================
+            
+            socket.on('list_sessions', async (data) => {
+                try {
+                    const { gameSlug } = data;
+                    const sessions = await this.sessionManager.getActiveSessions(gameSlug);
+                    
+                    // Add real-time data
+                    const sessionsWithRealtime = sessions.map(session => ({
+                        ...session,
+                        isLive: this.activeSessions.has(session.id),
+                        activeConnections: this.activeSessions.get(session.id)?.sockets?.size || 0
+                    }));
+                    
+                    socket.emit('sessions_list', {
+                        success: true,
+                        sessions: sessionsWithRealtime
+                    });
+                    
+                } catch (error) {
+                    console.error('❌ List sessions error:', error);
+                    socket.emit('sessions_list', {
+                        success: false,
+                        error: error.message
+                    });
+                }
+            });
+            
+            // ================================
+            // DISCONNECT HANDLING
+            // ================================
+            
+            socket.on('disconnect', async (reason) => {
+                console.log(`🔌 Socket disconnected: ${socket.id} (${reason})`);
+                await this.handlePlayerLeave(socket);
+            });
+        });
+    }
+    
+    async handlePlayerLeave(socket) {
+        try {
+            const sessionId = this.socketToSession.get(socket.id);
+            if (!sessionId) return;
+            
+            const realtimeSession = this.activeSessions.get(sessionId);
+            if (!realtimeSession) return;
+            
+            // Find user
+            let user = null;
+            let isSpectator = false;
+            
+            for (const [userId, player] of realtimeSession.players) {
+                if (player.socketId === socket.id) {
+                    user = player;
+                    break;
+                }
+            }
+            
+            if (!user) {
+                for (const [userId, spectator] of realtimeSession.spectators) {
+                    if (spectator.socketId === socket.id) {
+                        user = spectator;
+                        isSpectator = true;
+                        break;
+                    }
+                }
+            }
+            
+            if (user) {
+                if (!isSpectator) {
+                    // Handle player disconnect in database
+                    await this.sessionManager.handlePlayerDisconnect(sessionId, user.id);
+                    realtimeSession.players.delete(user.id);
+                } else {
+                    realtimeSession.spectators.delete(user.id);
+                }
+                
+                // Notify remaining players
+                socket.to(`session_${sessionId}`).emit('player_left', {
+                    user: user,
+                    isSpectator: isSpectator,
+                    sessionPlayers: Array.from(realtimeSession.players.values()),
+                    sessionSpectators: Array.from(realtimeSession.spectators.values())
+                });
+                
+                console.log(`👋 ${user.username} left session ${sessionId}`);
+            }
+            
+            // Cleanup tracking
+            realtimeSession.sockets.delete(socket.id);
+            this.socketToSession.delete(socket.id);
+            this.playerToSocket.delete(user?.id);
+            
+            // Remove session if empty
+            if (realtimeSession.sockets.size === 0) {
+                this.activeSessions.delete(sessionId);
+                console.log(`🗑️ Real-time session ${sessionId} cleaned up`);
+            }
+            
+        } catch (error) {
+            console.error('❌ Handle player leave error:', error);
+        }
+    }
+    
+    cleanupInactiveSessions() {
+        const now = new Date();
+        const TIMEOUT = 30 * 60 * 1000; // 30 minutes
+        
+        for (const [sessionId, session] of this.activeSessions) {
+            if (now - session.lastActivity > TIMEOUT) {
+                this.activeSessions.delete(sessionId);
+                console.log(`🧹 Cleaned up inactive session: ${sessionId}`);
+            }
+        }
+    }
+    
+    // ================================
+    // PUBLIC METHODS FOR GAME LOGIC
+    // ================================
+    
+    broadcastToSession(sessionId, event, data) {
+        this.io.to(`session_${sessionId}`).emit(event, data);
+    }
+    
+    getSessionPlayers(sessionId) {
+        const session = this.activeSessions.get(sessionId);
+        return session ? Array.from(session.players.values()) : [];
+    }
+    
+    getSessionSpectators(sessionId) {
+        const session = this.activeSessions.get(sessionId);
+        return session ? Array.from(session.spectators.values()) : [];
+    }
+    
+    isSessionActive(sessionId) {
+        return this.activeSessions.has(sessionId);
+    }
+}

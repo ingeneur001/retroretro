@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retro Arcade - Home</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: #ffffff;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+        }
+
+        .online-status {
+            font-size: 1rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            padding: 0.4rem 0.8rem;
+            border-radius: 8px;
+            border: 2px solid transparent;
+            color: #00ff00;
+            text-shadow: 
+                0 0 10px #00ff00,
+                0 0 20px #00ff00,
+                0 0 30px #00ff00;
+            border-color: #00ff00;
+            background: rgba(0, 255, 0, 0.1);
+            animation: neonPulseGreen 2s infinite alternate;
+        }
+
+        @keyframes neonPulseGreen {
+            0% {
+                text-shadow: 
+                    0 0 10px #00ff00,
+                    0 0 20px #00ff00,
+                    0 0 30px #00ff00;
+            }
+            100% {
+                text-shadow: 
+                    0 0 5px #00ff00,
+                    0 0 10px #00ff00,
+                    0 0 15px #00ff00;
+            }
+        }
+
+        /* Main Title */
+        .main-title {
+            text-align: center;
+            margin: 3rem 0;
+        }
+
+        .neon-title {
+            font-size: 6rem;
+            font-weight: bold;
+            color: #00ffff;
+            text-shadow: 
+                0 0 15px #00ffff,
+                0 0 30px #00ffff,
+                0 0 45px #00ffff,
+                0 0 60px #00ffff;
+            letter-spacing: 0.3rem;
+            animation: neonPulse 2s infinite alternate;
+        }
+
+        @keyframes neonPulse {
+            0% {
+                text-shadow: 
+                    0 0 15px #00ffff,
+                    0 0 30px #00ffff,
+                    0 0 45px #00ffff,
+                    0 0 60px #00ffff;
+            }
+            100% {
+                text-shadow: 
+                    0 0 8px #00ffff,
+                    0 0 15px #00ffff,
+                    0 0 25px #00ffff,
+                    0 0 35px #00ffff;
+            }
+        }
+
+        /* Navigation */
+        .navigation {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            margin: 3rem 0;
+            flex-wrap: nowrap;
+        }
+
+        .nav-button {
+            background: transparent;
+            border: 2px solid #00ffff;
+            color: #00ffff;
+            padding: 0.7rem 1.5rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            min-width: 100px;
+            text-shadow: 
+                0 0 5px #00ffff,
+                0 0 8px #00ffff;
+            box-shadow: 
+                0 0 8px rgba(0, 255, 255, 0.3),
+                inset 0 0 8px rgba(0, 255, 255, 0.1);
+            white-space: nowrap;
+        }
+
+        .nav-button:hover {
+            background: rgba(0, 255, 255, 0.1);
+            text-shadow: 
+                0 0 8px #00ffff,
+                0 0 15px #00ffff,
+                0 0 25px #00ffff;
+            box-shadow: 
+                0 0 15px rgba(0, 255, 255, 0.6),
+                inset 0 0 15px rgba(0, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        .nav-button.active {
+            background: rgba(0, 255, 255, 0.2);
+            text-shadow: 
+                0 0 8px #00ffff,
+                0 0 15px #00ffff,
+                0 0 25px #00ffff;
+            box-shadow: 
+                0 0 20px rgba(0, 255, 255, 0.8),
+                inset 0 0 20px rgba(0, 255, 255, 0.3);
+        }
+
+        /* Server Status Box */
+        .content-area {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 2rem;
+            gap: 2rem;
+        }
+
+        .server-status {
+            background: rgba(0, 0, 0, 0.9);
+            border: 4px solid #00ffff;
+            border-radius: 15px;
+            padding: 2rem;
+            min-width: 400px;
+            box-shadow: 
+                0 0 20px rgba(0, 255, 255, 0.5),
+                0 0 40px rgba(0, 255, 255, 0.3);
+            animation: boxColorChange 3s infinite;
+        }
+
+        @keyframes boxColorChange {
+            0% {
+                border-color: #00ffff;
+                box-shadow: 
+                    0 0 20px rgba(0, 255, 255, 0.8),
+                    0 0 40px rgba(0, 255, 255, 0.5);
+            }
+            25% {
+                border-color: #00ff88;
+                box-shadow: 
+                    0 0 20px rgba(0, 255, 136, 0.8),
+                    0 0 40px rgba(0, 255, 136, 0.5);
+            }
+            50% {
+                border-color: #ff00ff;
+                box-shadow: 
+                    0 0 20px rgba(255, 0, 255, 0.8),
+                    0 0 40px rgba(255, 0, 255, 0.5);
+            }
+            75% {
+                border-color: #ffff00;
+                box-shadow: 
+                    0 0 20px rgba(255, 255, 0, 0.8),
+                    0 0 40px rgba(255, 255, 0, 0.5);
+            }
+            100% {
+                border-color: #00ffff;
+                box-shadow: 
+                    0 0 20px rgba(0, 255, 255, 0.8),
+                    0 0 40px rgba(0, 255, 255, 0.5);
+            }
+        }
+
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+            padding: 0.5rem 0;
+        }
+
+        .status-label {
+            color: #00ffff;
+            text-shadow: 
+                0 0 5px #00ffff,
+                0 0 10px #00ffff;
+            font-weight: bold;
+        }
+
+        .status-value {
+            font-weight: bold;
+            text-shadow: 
+                0 0 5px currentColor,
+                0 0 10px currentColor;
+        }
+
+        .status-value.players {
+            color: #ffff00;
+            text-shadow: 
+                0 0 5px #ffff00,
+                0 0 10px #ffff00,
+                0 0 15px #ffff00;
+            animation: neonPulseYellow 2s infinite alternate;
+        }
+
+        .status-value.uptime,
+        .status-value.version {
+            color: #00ff00;
+            text-shadow: 
+                0 0 5px #00ff00,
+                0 0 10px #00ff00;
+        }
+
+        @keyframes neonPulseYellow {
+            0% {
+                text-shadow: 
+                    0 0 5px #ffff00,
+                    0 0 10px #ffff00,
+                    0 0 15px #ffff00;
+            }
+            100% {
+                text-shadow: 
+                    0 0 3px #ffff00,
+                    0 0 6px #ffff00,
+                    0 0 9px #ffff00;
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .neon-title {
+                font-size: 3.5rem;
+            }
+            
+            .navigation {
+                flex-wrap: wrap;
+                gap: 1rem;
+            }
+            
+            .nav-button {
+                min-width: 80px;
+                padding: 0.6rem 1rem;
+                font-size: 0.9rem;
+            }
+            
+            .content-area {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .server-status {
+                min-width: auto;
+                width: 100%;
+                max-width: 500px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div></div>
+        <div class="online-status">● ONLINE</div>
+    </div>
+
+    <!-- Main Title -->
+    <div class="main-title">
+        <h1 class="neon-title">RETRO ARCADE</h1>
+    </div>
+
+    <!-- Navigation - HOME ist aktiv -->
+    <div class="navigation">
+        <button class="nav-button active">HOME</button>
+        <button class="nav-button" onclick="goToGames()">GAMES</button>
+        <button class="nav-button" onclick="goToProfile()">PROFILE</button>
+        <button class="nav-button" onclick="goToScores()">SCORES</button>
+        <button class="nav-button" onclick="goToSettings()">SETTINGS</button>
+    </div>
+
+    <!-- Server Status Box -->
+    <div class="content-area">
+        <div class="server-status">
+            <div class="status-row">
+                <span class="status-label">Players Online:</span>
+                <span class="status-value players">0</span>
+            </div>
+            
+            <div class="status-row">
+                <span class="status-label">Server Uptime:</span>
+                <span class="status-value uptime">--</span>
+            </div>
+            
+            <div class="status-row">
+                <span class="status-label">Version:</span>
+                <span class="status-value version">--</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function goToGames() {
+         console.log('Navigating to GAMES ZONE');
+         window.location.href = './GamesZone.html'; // Navigation zur Games-Seite
+        }
+
+        function goToProfile() {
+            console.log('Navigating to PROFILE');
+            alert('Loading PROFILE page...');
+        }
+
+        function goToScores() {
+            console.log('Navigating to SCORES');
+            alert('Loading SCORES page...');
+        }
+
+        function goToSettings() {
+            console.log('Navigating to SETTINGS');
+            alert('Loading SETTINGS page...');
+        }
+
+        // Navigation active state management
+        document.querySelectorAll('.nav-button').forEach(button => {
+            button.addEventListener('click', function() {
+                if (!this.classList.contains('active')) {
+                    document.querySelectorAll('.nav-button').forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

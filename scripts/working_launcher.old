@@ -1,0 +1,291 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+🎮 WORKING LAUNCHER - Port 3001
+===================================
+Automatisch generiert vom Port Tester
+Läuft aus scripts/ Ordner
+
+Getestete Methode: environment_variable
+Stabiler Backend-Port: 3001
+Frontend-Port: 3000 (unverändert)
+
+Generiert am: 2025-08-03 07:30:46
+"""
+
+import subprocess
+import os
+import sys
+import time
+import signal
+import requests
+import webbrowser
+from pathlib import Path
+from datetime import datetime
+
+
+class WorkingLauncher:
+    """Launcher mit bestätigtem stabilen Backend-Port"""
+    
+    def __init__(self):
+        self.scripts_root = Path(__file__).parent  # scripts/
+        self.project_root = self.scripts_root.parent  # root/
+        self.backend_port = 3001
+        self.frontend_port = 3000
+        self.backend_url = f"http://localhost:{self.backend_port}"
+        self.frontend_url = f"http://localhost:{self.frontend_port}"
+        self.backend_process = None
+        self.frontend_process = None
+        self.running = False
+        self.temp_server_path = None
+        
+    def print_banner(self):
+        """Start-Banner"""
+        print("=" * 60)
+        print(f"🎮 WORKING LAUNCHER - STABILER PORT {self.backend_port}")
+        print("=" * 60)
+        print(f"⏰ {datetime.now().strftime('%H:%M:%S')}")
+        print(f"📁 Scripts: {self.scripts_root}")
+        print(f"📁 Projekt: {self.project_root}")
+        print("✅ Getestete Methode: environment_variable")
+        print(f"🎯 Backend: Port {self.backend_port} (stabil getestet)")
+        print(f"🎯 Frontend: Port {self.frontend_port} (Standard)")
+        print("-" * 60)
+    
+    def create_temp_server_js(self):
+        """Erstellt temporäre server.js mit richtigem Port (falls nötig)"""
+        backend_path = self.project_root / "backend"
+        original_server = backend_path / "server.js"
+        temp_server = backend_path / f"server_working_{self.backend_port}.js"
+        
+        try:
+            with open(original_server, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            # Port ersetzen
+            modified_content = content.replace(
+                'const PORT = process.env.PORT || 3001;',
+                f'const PORT = process.env.PORT || {self.backend_port};'
+            )
+            
+            # Alternative Varianten falls Standard nicht gefunden
+            if 'const PORT = process.env.PORT || 3001;' not in content:
+                modified_content = content.replace(
+                    'const port = process.env.PORT || 3001;',
+                    f'const port = process.env.PORT || {self.backend_port};'
+                )
+                modified_content = modified_content.replace(
+                    'const PORT = 3001;',
+                    f'const PORT = {self.backend_port};'
+                )
+            
+            with open(temp_server, 'w', encoding='utf-8') as f:
+                f.write(modified_content)
+            
+            self.temp_server_path = temp_server
+            return temp_server
+            
+        except Exception as e:
+            print(f"⚠️  Fehler beim Erstellen der temporären server.js: {e}")
+            return None
+    
+    def cleanup_temp_server(self):
+        """Räumt temporäre server.js auf"""
+        if self.temp_server_path and self.temp_server_path.exists():
+            try:
+                self.temp_server_path.unlink()
+                print(f"🧹 Temporäre Datei gelöscht: {self.temp_server_path.name}")
+            except Exception as e:
+                print(f"⚠️  Cleanup-Fehler: {e}")
+    
+    def start_backend(self):
+        """Backend auf stabilem Port starten"""
+        print(f"🚀 Starte Backend auf STABILEM Port {self.backend_port} (environment_variable)...")
+        
+        try:
+            # Backend mit Umgebungsvariable starten (getestete Methode)
+            env = os.environ.copy()
+            env['PORT'] = str(self.backend_port)
+            
+            self.backend_process = subprocess.Popen(
+                ['node', '../backend/server.js'],
+                cwd=self.scripts_root,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                shell=True,
+                env=env
+            )
+            
+            # Auf Backend-Start warten
+            print("⏳ Warte auf Backend-Start...")
+            for i in range(20):
+                try:
+                    response = requests.get(f"{self.backend_url}/health", timeout=3)
+                    if response.status_code == 200:
+                        print(f"✅ Backend bereit auf Port {self.backend_port}!")
+                        return True
+                except requests.exceptions.ConnectionError:
+                    pass  # Normal beim Startup
+                except Exception as e:
+                    if i == 19:  # Letzter Versuch
+                        print(f"⚠️  Backend-Start Problem: {e}")
+                time.sleep(1)
+                
+            print("❌ Backend-Start timeout")
+            return False
+            
+        except Exception as e:
+            print(f"❌ Backend-Start Fehler: {e}")
+            return False
+    
+    def start_frontend(self):
+        """Frontend starten"""
+        print("🚀 Starte Frontend...")
+        
+        try:
+            frontend_path = self.project_root / "frontend"
+            
+            if not frontend_path.exists():
+                print(f"❌ Frontend-Ordner nicht gefunden: {frontend_path}")
+                return False
+            
+            # Frontend starten (aus scripts/ Ordner)
+            self.frontend_process = subprocess.Popen(
+                ['npm', 'start'],
+                cwd=frontend_path,  # Direkt im frontend/ Ordner ausführen
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                shell=True,
+                env={**os.environ, 'BROWSER': 'none'}  # Browser nicht automatisch öffnen
+            )
+            
+            print("⏳ Warte auf Frontend-Compilation...")
+            for i in range(60):  # Frontend braucht länger
+                try:
+                    response = requests.get(f"{self.frontend_url}", timeout=3)
+                    if response.status_code == 200:
+                        print("✅ Frontend bereit!")
+                        return True
+                except requests.exceptions.ConnectionError:
+                    pass  # Normal beim Startup
+                except Exception:
+                    pass
+                time.sleep(2)
+                
+            # Auch bei Timeout weitermachen - Frontend braucht manchmal sehr lange
+            print("⏳ Frontend noch am Compilieren, mache trotzdem weiter...")
+            return True
+            
+        except Exception as e:
+            print(f"❌ Frontend-Start Fehler: {e}")
+            return False
+    
+    def open_browser(self):
+        """Browser zur App öffnen"""
+        app_url = f"{self.frontend_url}/legal-retro-gaming-service"
+        print(f"🌐 Öffne Browser: {app_url}")
+        
+        try:
+            webbrowser.open(app_url)
+        except Exception:
+            print(f"💡 Bitte manuell öffnen: {app_url}")
+    
+    def monitor_health(self):
+        """Überwacht die Gesundheit der Services"""
+        print("\n🔍 Starte Gesundheits-Überwachung...")
+        print("💡 Alle 30 Sekunden wird Backend-Gesundheit geprüft")
+        
+        while self.running:
+            time.sleep(30)
+            
+            try:
+                response = requests.get(f"{self.backend_url}/health", timeout=10)
+                if response.status_code == 200:
+                    print(f"✅ Backend-Check OK ({datetime.now().strftime('%H:%M:%S')})")
+                else:
+                    print(f"⚠️  Backend antwortet mit Status {response.status_code}")
+                    
+            except requests.exceptions.ConnectionError:
+                print("❌ Backend-Verbindung verloren!")
+                print("🚨 SYSTEM HAT BACKEND WAHRSCHEINLICH GETÖTET!")
+                print(f"💡 Port {self.backend_port} war als stabil getestet - das ist unerwartet!")
+                break
+            except requests.exceptions.Timeout:
+                print("⚠️  Backend-Timeout (aber Prozess läuft noch)")
+            except Exception as e:
+                print(f"⚠️  Gesundheits-Check Fehler: {e}")
+                break
+    
+    def run(self):
+        """Hauptfunktion - startet alles"""
+        self.print_banner()
+        
+        # Signal-Handler für sauberes Beenden
+        def signal_handler(signum, frame):
+            print("\n🛑 Stoppe Services...")
+            self.running = False
+            if self.backend_process:
+                self.backend_process.terminate()
+            if self.frontend_process:
+                self.frontend_process.terminate()
+            self.cleanup_temp_server()
+            sys.exit(0)
+            
+        signal.signal(signal.SIGINT, signal_handler)
+        self.running = True
+        
+        # Backend starten
+        if not self.start_backend():
+            print("❌ Backend konnte nicht gestartet werden")
+            self.cleanup_temp_server()
+            return False
+            
+        # Frontend starten
+        if not self.start_frontend():
+            print("❌ Frontend konnte nicht gestartet werden")
+            self.cleanup_temp_server()
+            return False
+        
+        # Kurz warten dann Browser öffnen
+        time.sleep(3)
+        self.open_browser()
+        
+        # Status ausgeben
+        print("\n🎉 ALLE SERVICES LAUFEN!")
+        print(f"🌐 Frontend: {self.frontend_url}/legal-retro-gaming-service")
+        print(f"🔗 Backend:  {self.backend_url}/health")
+        print(f"✅ Stabiler Backend-Port: {self.backend_port} (Methode: environment_variable)")
+        print("💡 Drücke Ctrl+C zum Stoppen")
+        print("-" * 60)
+        
+        # Gesundheits-Überwachung starten
+        try:
+            self.monitor_health()
+        except KeyboardInterrupt:
+            pass
+        finally:
+            self.cleanup_temp_server()
+
+
+def main():
+    """Hauptfunktion"""
+    launcher = WorkingLauncher()
+    
+    try:
+        success = launcher.run()
+        if not success:
+            print("❌ Launcher konnte nicht gestartet werden")
+            sys.exit(1)
+    except KeyboardInterrupt:
+        print("\n🛑 Von Benutzer beendet")
+    except Exception as e:
+        print(f"💥 Unerwarteter Fehler: {e}")
+        launcher.cleanup_temp_server()
+    finally:
+        print("👋 Working Launcher beendet")
+
+
+if __name__ == "__main__":
+    main()

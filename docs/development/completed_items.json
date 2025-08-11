@@ -1,0 +1,17 @@
+[
+  "retroretro_start.py",
+  "backend/src/database/",
+  "backend/src/auth/",
+  "backend/src/routes/auth.js",
+  "backend/src/game/",
+  "backend/src/socket/",
+  "frontend/src/i18n/",
+  "backend/src/payment/",
+  "backend/src/models/User.js",
+  "backend/src/routes/users.js",
+  "backend/src/services/userService.js",
+  "backend/src/middleware/roles.js",
+  "backend/src/models/Game.js",
+  "backend/src/services/gameService.js",
+  "frontend/src/hooks/useSocket.js"
+]

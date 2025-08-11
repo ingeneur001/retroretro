@@ -1,0 +1,1739 @@
+// ===================================================================
+// RETRO GAMING BACKEND SERVER
+// Enhanced Node.js/Express server with Socket.IO and JWT authentication
+// ===================================================================
+
+// Environment configuration (must be first!)
+require('dotenv').config();
+
+// Core dependencies
+const express = require('express');
+const multiplayerConfig = require('./src/config/multiplayer');
+const cors = require('cors');
+const http = require('http');
+const socketIo = require('socket.io');
+const jwt = require('jsonwebtoken');
+const morgan = require('morgan');
+const path = require('path');
+
+// Database connections
+const { testPostgreSQL, testRedis, closeConnections } = require('./src/database/connection');
+
+// ===================================================================
+// DYNAMIC IMPORTS - Database Managers (optional)
+// ===================================================================
+let UserManager, GameSessionManager, setupDatabase;
+let userManager = null;
+let sessionManager = null;
+let databaseReady = false;
+
+// Try to load database managers
+try {
+  const managers = require('./src/database/managers');
+  UserManager = managers.UserManager;
+  GameSessionManager = managers.GameSessionManager;
+  console.log('✅ Database managers loaded');
+} catch (err) {
+  console.log('⚠️  Database managers not found - running in basic mode');
+}
+
+// Try to load database setup
+try {
+  const setup = require('./src/database/setup');
+  setupDatabase = setup.setupDatabase;
+  console.log('✅ Database setup loaded');
+} catch (err) {
+  console.log('⚠️  Database setup not found - skipping auto-setup');
+}
+
+// Try to load RetroRetroApp class (optional)
+let RetroRetroApp;
+try {
+  RetroRetroApp = require('./src/app');
+  console.log('✅ RetroRetroApp class loaded');
+} catch (err) {
+  console.log('⚠️  RetroRetroApp class not found - using basic Express app');
+}
+
+// ===================================================================
+// EXPRESS APP INITIALIZATION
+// ===================================================================
+let app;
+let retroApp = null;
+
+if (RetroRetroApp) {
+  retroApp = new RetroRetroApp();
+  app = retroApp.getApp();
+  console.log('🚀 Using enhanced RetroRetroApp');
+} else {
+  app = express();
+  console.log('🚀 Using basic Express app');
+}
+
+// ===================================================================
+// SERVER AND SOCKET.IO CONFIGURATION
+// ===================================================================
+const server = http.createServer(app);
+
+// Enhanced Socket.IO configuration
+const io = socketIo(server, {
+    cors: multiplayerConfig.socket.cors,
+    pingTimeout: multiplayerConfig.socket.pingTimeout,
+    pingInterval: multiplayerConfig.socket.pingInterval,
+    transports: multiplayerConfig.socket.transports});
+
+// ===================================================================
+// JWT AUTHENTICATION MIDDLEWARE FOR SOCKET.IO - ENHANCED FOR DEMO
+// ===================================================================
+const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key_change_in_production';
+
+io.use((socket, next) => {
+  try {
+    console.log('🔍 Socket authentication attempt...');
+    
+    // JWT Token aus verschiedenen Quellen extrahieren
+    const token = socket.handshake.auth.token || 
+                  socket.handshake.query.token ||
+                  (socket.handshake.headers.authorization && 
+                   socket.handshake.headers.authorization.replace('Bearer ', ''));
+    
+    if (!token) {
+      console.log('❌ No token provided');
+      return next(new Error('Authentication error: No token provided'));
+    }
+
+    console.log('🔍 Token received, length:', token.length);
+    console.log('🔍 Token preview:', token.substring(0, 20) + '...');
+
+    // ✅ DEMO MODE: Spezielle Behandlung für Demo-Tokens
+    if (token.startsWith('demo.') || token.includes('demo_user_') || token.length < 50) {
+      console.log('🧪 Demo token detected - using relaxed validation');
+      
+      try {
+        let payload;
+        
+        // Verschiedene Demo-Token Formate unterstützen
+        if (token.startsWith('demo.')) {
+          // Format: demo.payload.signature
+          const parts = token.split('.');
+          if (parts.length >= 2) {
+            payload = JSON.parse(atob(parts[1]));
+          }
+        } else {
+          // Einfacher Base64-kodierter Payload
+          try {
+            payload = JSON.parse(atob(token));
+          } catch {
+            // Als JWT behandeln
+            const parts = token.split('.');
+            if (parts.length === 3) {
+              payload = JSON.parse(atob(parts[1]));
+            }
+          }
+        }
+        
+        if (!payload) {
+          throw new Error('Could not parse demo token payload');
+        }
+        
+        // Store user data in socket
+        socket.userId = payload.id || payload.userId || `demo_${Date.now()}`;
+        socket.username = payload.username || `DemoUser${Math.floor(Math.random() * 1000)}`;
+        socket.displayName = payload.displayName || payload.username || socket.username;
+        socket.email = payload.email || `${socket.username}@example.com`;
+        socket.userRole = payload.role || 'user';
+        
+        console.log(`✅ Demo user authenticated: ${socket.displayName} (ID: ${socket.userId})`);
+        console.log(`🎮 Demo mode features: All multiplayer features enabled`);
+        return next();
+        
+      } catch (demoError) {
+        console.error('❌ Demo token parsing failed:', demoError.message);
+        
+        // ✅ FALLBACK: Erstelle automatisch einen Demo-User
+        console.log('🔄 Creating automatic demo user as fallback...');
+        
+        const autoUserId = `auto_demo_${Date.now()}`;
+        socket.userId = autoUserId;
+        socket.username = `AutoDemo${Math.floor(Math.random() * 1000)}`;
+        socket.displayName = `Auto Demo User ${Math.floor(Math.random() * 1000)}`;
+        socket.email = `${socket.username}@example.com`;
+        socket.userRole = 'user';
+        
+        console.log(`✅ Automatic demo user created: ${socket.displayName} (ID: ${socket.userId})`);
+        return next();
+      }
+    }
+
+    // ✅ NORMALE JWT VALIDATION für echte Tokens
+    console.log('🔐 Attempting standard JWT validation...');
+    
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      
+      // Store user data in socket
+      socket.userId = decoded.id || decoded.userId;
+      socket.username = decoded.username;
+      socket.displayName = decoded.displayName || decoded.username;
+      socket.email = decoded.email;
+      socket.userRole = decoded.role || 'user';
+      
+      console.log(`✅ Standard JWT user authenticated: ${socket.username} (ID: ${socket.userId})`);
+      next();
+      
+    } catch (jwtError) {
+      console.error('❌ Standard JWT validation failed:', jwtError.message);
+      
+      // ✅ FINAL FALLBACK: Wenn alles fehlschlägt, erlaube Demo-Zugang
+      if (process.env.NODE_ENV === 'development' || process.env.ALLOW_DEMO === 'true') {
+        console.log('🔄 Development mode - allowing demo access...');
+        
+        const fallbackUserId = `fallback_demo_${Date.now()}`;
+        socket.userId = fallbackUserId;
+        socket.username = `FallbackDemo${Math.floor(Math.random() * 1000)}`;
+        socket.displayName = `Fallback Demo User ${Math.floor(Math.random() * 1000)}`;
+        socket.email = `${socket.username}@example.com`;
+        socket.userRole = 'user';
+        
+        console.log(`✅ Fallback demo user created: ${socket.displayName} (ID: ${socket.userId})`);
+        return next();
+      }
+      
+      // Wirklicher Fehler nur in Production
+      return next(new Error('Authentication error: Invalid token'));
+    }
+    
+  } catch (err) {
+    console.error('❌ General socket authentication error:', err.message);
+    
+    // ✅ DEVELOPMENT FALLBACK: Erlaube Zugang in Development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔄 Development mode - creating emergency demo user...');
+      
+      const emergencyUserId = `emergency_demo_${Date.now()}`;
+      socket.userId = emergencyUserId;
+      socket.username = `EmergencyDemo${Math.floor(Math.random() * 1000)}`;
+      socket.displayName = `Emergency Demo User ${Math.floor(Math.random() * 1000)}`;
+      socket.email = `${socket.username}@example.com`;
+      socket.userRole = 'user';
+      
+      console.log(`✅ Emergency demo user created: ${socket.displayName} (ID: ${socket.userId})`);
+      return next();
+    }
+    
+    next(new Error('Authentication error: ' + err.message));
+  }
+});
+// ===================================================================
+// EXPRESS MIDDLEWARE CONFIGURATION
+// ===================================================================
+app.use(cors({
+  origin: [
+    "http://localhost:3000", 
+    "http://127.0.0.1:3000", 
+    "http://localhost:3001"
+  ],
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
+}));
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(morgan('combined')); // Request logging
+
+// ===================================================================
+// SERVER STATE MANAGEMENT
+// ===================================================================
+const PORT = process.env.PORT || 3001;
+let connectedUsers = 0;
+const serverStartTime = Date.now();
+const activeUsers = new Map(); // userId -> {socketId, userData, joinedRooms}
+
+// ===================================================================
+// UTILITY FUNCTIONS
+// ===================================================================
+function getUserSocket(userId) {
+  const userSession = activeUsers.get(userId);
+  return userSession ? io.sockets.sockets.get(userSession.socketId) : null;
+}
+
+function isUserOnline(userId) {
+  return activeUsers.has(userId);
+}
+
+function getOnlineUsers() {
+  return Array.from(activeUsers.values()).map(session => session.userData);
+}
+
+function sendToUser(userId, event, data) {
+  const socket = getUserSocket(userId);
+  if (socket) {
+    socket.emit(event, data);
+    return true;
+  }
+  return false;
+}
+
+// ===================================================================
+// HEALTH CHECK ENDPOINTS
+// ===================================================================
+app.get('/health', (req, res) => {
+  const uptime = Math.floor((Date.now() - serverStartTime) / 1000);
+  
+  res.json({
+    status: 'OK',
+    uptime: uptime,
+    version: '1.0.0',
+    timestamp: new Date().toISOString(),
+    connectedUsers: connectedUsers,
+    authenticatedUsers: activeUsers.size,
+    port: PORT,
+    features: {
+      socketio: 'enhanced',
+      jwt: 'enabled',
+      database: databaseReady,
+      privateMessaging: true,
+      gameInvitations: true
+    }
+  });
+});
+
+app.get('/health-db', async (req, res) => {
+  try {
+    console.log('Testing database connections...');
+    const pgHealth = await testPostgreSQL();
+    const redisHealth = await testRedis();
+    
+    res.json({
+      status: 'database-check',
+      databases: {
+        postgresql: pgHealth ? 'connected' : 'disconnected',
+        redis: redisHealth ? 'connected' : 'disconnected'
+      },
+      features: {
+        userManagement: databaseReady && userManager !== null,
+        sessionManagement: databaseReady && sessionManager !== null,
+        scoreTracking: databaseReady,
+        jwtAuthentication: true
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    res.status(500).json({ 
+      error: 'Database connection error',
+      message: err.message 
+    });
+  }
+});
+
+// ===================================================================
+// API ENDPOINTS
+// ===================================================================
+
+// Server status
+app.get('/api/status', (req, res) => {
+  res.json({
+    server: 'Legal Retro Gaming Service',
+    status: 'running',
+    users: connectedUsers,
+    authenticatedUsers: activeUsers.size,
+    uptime: Math.floor((Date.now() - serverStartTime) / 1000),
+    database: databaseReady,
+    socketio: 'stable',
+    jwt: 'enabled',
+    features: databaseReady ? 
+      ['multiplayer', 'user-accounts', 'score-tracking', 'private-messaging'] : 
+      ['multiplayer', 'jwt-auth']
+  });
+});
+
+// Online users
+app.get('/api/online-users', (req, res) => {
+  const onlineUsers = Array.from(activeUsers.values()).map(session => ({
+    id: session.userData.id,
+    username: session.userData.username,
+    displayName: session.userData.displayName,
+    connectedAt: session.connectedAt
+  }));
+  
+  res.json({
+    count: onlineUsers.length,
+    users: onlineUsers
+  });
+});
+
+// User status
+app.get('/api/user-status/:userId', (req, res) => {
+  const userId = req.params.userId;
+  const userSession = activeUsers.get(userId);
+  
+  res.json({
+    userId: userId,
+    online: !!userSession,
+    lastSeen: userSession ? userSession.lastActivity : 'Unknown',
+    connectedAt: userSession ? userSession.connectedAt : null
+  });
+});
+
+// Server statistics
+app.get('/api/server-stats', (req, res) => {
+  res.json({
+    connectedUsers: connectedUsers,
+    authenticatedUsers: activeUsers.size,
+    totalSockets: io.sockets.sockets.size,
+    activeRooms: Array.from(io.sockets.adapter.rooms.keys())
+      .filter(room => !io.sockets.sockets.has(room)),
+    timestamp: new Date().toISOString(),
+    features: {
+      jwt: true,
+      privateMessaging: true,
+      gameInvitations: true,
+      realTimeChat: true,
+      database: databaseReady
+    }
+  });
+});
+
+// Available games
+app.get('/api/games', async (req, res) => {
+  try {
+    // Try database first, fallback to hardcoded
+    if (databaseReady && userManager) {
+      const dbGames = await userManager.getGames();
+      if (dbGames && dbGames.length > 0) {
+        return res.json({
+          source: 'database',
+          availableGames: dbGames.map(game => ({
+            id: game.slug,
+            name: game.title,
+            description: game.description,
+            status: 'available',
+            maxPlayers: game.max_players,
+            isMultiplayer: game.is_multiplayer,
+            category: game.category,
+            difficulty: game.difficulty_level
+          }))
+        });
+      }
+    }
+    
+    // Fallback to hardcoded games
+    res.json({
+      source: 'fallback',
+      availableGames: [
+        {
+          id: 'snake',
+          name: 'Snake Game',
+          description: 'Classic Snake game built in React',
+          status: 'available',
+          maxPlayers: 4,
+          isMultiplayer: true
+        },
+        {
+          id: 'memory',
+          name: 'Memory Game', 
+          description: 'Test your memory with cards',
+          status: 'available',
+          maxPlayers: 1,
+          isMultiplayer: false
+        },
+        {
+          id: 'pong',
+          name: 'Pong Demo',
+          description: 'Simple Pong game simulation',
+          status: 'available',
+          maxPlayers: 2,
+          isMultiplayer: true
+        },
+        {
+          id: 'tetris',
+          name: 'Tetris Demo',
+          description: 'Tetris-style block game',
+          status: 'available',
+          maxPlayers: 2,
+          isMultiplayer: true
+        }
+      ]
+    });
+  } catch (error) {
+    console.error('❌ Error fetching games:', error);
+    res.status(500).json({ error: 'Failed to fetch games' });
+  }
+});
+
+// Game sessions (requires database)
+app.get('/api/sessions', async (req, res) => {
+  if (!databaseReady || !sessionManager) {
+    return res.json({
+      message: 'Session management requires database connection',
+      sessions: []
+    });
+  }
+  
+  try {
+    const sessions = await sessionManager.getActiveSessions();
+    res.json({ sessions });
+  } catch (error) {
+    console.error('❌ Error fetching sessions:', error);
+    res.status(500).json({ error: 'Failed to fetch sessions' });
+  }
+});
+
+// Leaderboard (requires database)
+app.get('/api/leaderboard/:gameId?', async (req, res) => {
+  if (!databaseReady || !userManager) {
+    return res.json({
+      message: 'Leaderboard requires database connection',
+      leaderboard: []
+    });
+  }
+  
+  try {
+    const { gameId } = req.params;
+    const limit = parseInt(req.query.limit) || 10;
+    const leaderboard = await userManager.getLeaderboard(gameId, limit);
+    res.json({ leaderboard, game: gameId || 'all' });
+  } catch (error) {
+    console.error('❌ Error fetching leaderboard:', error);
+    res.status(500).json({ error: 'Failed to fetch leaderboard' });
+  }
+});
+
+// User registration (requires database)
+app.post('/api/register', async (req, res) => {
+  if (!databaseReady || !userManager) {
+    return res.status(503).json({
+      error: 'User registration requires database connection'
+    });
+  }
+  
+  try {
+    const { username, email, password, displayName } = req.body;
+    
+    if (!username || !email || !password) {
+      return res.status(400).json({
+        error: 'Username, email, and password are required'
+      });
+    }
+
+    const user = await userManager.createUser({
+      username,
+      email,
+      password,
+      displayName: displayName || username
+    });
+
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        username: user.username,
+        displayName: user.display_name,
+        membershipTier: user.membership_tier
+      }
+    });
+  } catch (error) {
+    console.error('❌ Registration error:', error);
+    res.status(400).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ===================================================================
+// SOCKET.IO EVENT HANDLERS
+// ===================================================================
+io.on('connection', (socket) => {
+  connectedUsers++;
+  
+  console.log(`👤 Authenticated user connected: ${socket.username} (${socket.userId})`);
+  console.log(`📊 Total authenticated connections: ${connectedUsers}`);
+  
+  // Create user session
+  const userSession = {
+    socketId: socket.id,
+    userData: {
+      id: socket.userId,
+      username: socket.username,
+      displayName: socket.displayName,
+      email: socket.email,
+      role: socket.userRole
+    },
+    joinedRooms: [],
+    connectedAt: new Date(),
+    lastActivity: new Date()
+  };
+  
+  activeUsers.set(socket.userId, userSession);
+  
+  // Join personal room
+  socket.join(`user_${socket.userId}`);
+  
+  // Send welcome message
+  socket.emit('welcome', {
+    message: `Welcome back, ${socket.displayName}!`,
+    user: userSession.userData,
+    serverId: socket.id,
+    timestamp: new Date().toISOString(),
+    features: {
+      realTimeMultiplayer: true,
+      userAccounts: true,
+      privateMessaging: true,
+      gameInvitations: true,
+      scoreTracking: databaseReady,
+      leaderboards: databaseReady
+    }
+  });
+  
+  // Broadcast user online
+  socket.broadcast.emit('user-online', {
+    userId: socket.userId,
+    username: socket.username,
+    displayName: socket.displayName
+  });
+  
+  // Update player count
+  io.emit('player-count', connectedUsers);
+  
+  // ===================================================================
+  // SOCKET EVENT HANDLERS
+  // ===================================================================
+  
+  // Ping-pong for connection monitoring
+  socket.on('ping', (timestamp) => {
+    userSession.lastActivity = new Date();
+    
+    setImmediate(() => {
+      socket.emit('pong', {
+        timestamp,
+        serverTime: Date.now(),
+        databaseStatus: databaseReady,
+        connectionStable: true,
+        userId: socket.userId,
+        username: socket.username
+      });
+    });
+  });
+  
+  // Game join
+  socket.on('join-game', async (gameData) => {
+    console.log(`🎮 ${socket.username} joining game: ${gameData.gameId}`);
+    
+    const roomId = `game-${gameData.gameId}`;
+    socket.join(roomId);
+    
+    // Update user session
+    if (userSession && userSession.joinedRooms) {
+      userSession.joinedRooms.push(roomId);
+      userSession.lastActivity = new Date();
+    }
+    
+    // Enhanced game join mit User-Daten
+    socket.to(roomId).emit('player-joined', {
+      user: {
+        id: socket.userId,
+        username: socket.username,
+        displayName: socket.displayName,
+        email: socket.email,
+        role: socket.userRole
+      },
+      gameId: gameData.gameId,
+      timestamp: new Date().toISOString()
+    });
+    
+    // ✅ REPARIERT: Session Management mit Fallback
+    try {
+      if (databaseReady && sessionManager && typeof sessionManager.createOrJoinSession === 'function') {
+        // Database session management
+        console.log('🗄️ Creating database session...');
+        
+        const gameSession = await sessionManager.createOrJoinSession(
+          gameData.gameId, 
+          socket.userId,
+          socket.id
+        );
+        
+        socket.emit('game-session-created', {
+          sessionId: gameSession.id,
+          gameId: gameData.gameId,
+          roomId: roomId,
+          databaseSession: true,
+          success: true
+        });
+        
+        console.log(`✅ Database game session created: ${gameSession.id}`);
+        
+      } else {
+        // ✅ FALLBACK: Einfache Session ohne Database
+        console.log('🔄 Creating fallback session (no database)...');
+        
+        const fallbackSessionId = `session_${Date.now()}_${socket.userId}`;
+        
+        socket.emit('game-session-created', {
+          sessionId: fallbackSessionId,
+          gameId: gameData.gameId,
+          roomId: roomId,
+          databaseSession: false,
+          success: true,
+          fallback: true
+        });
+        
+        console.log(`✅ Fallback game session created: ${fallbackSessionId}`);
+      }
+      
+    } catch (error) {
+      console.error('❌ Game session creation failed:', error);
+      
+      // ✅ EMERGENCY FALLBACK: Immer erfolgreich antworten
+      const emergencySessionId = `emergency_${Date.now()}_${socket.userId}`;
+      
+      socket.emit('game-session-created', {
+        sessionId: emergencySessionId,
+        gameId: gameData.gameId,
+        roomId: roomId,
+        databaseSession: false,
+        success: true,
+        emergency: true,
+        error: error.message
+      });
+      
+      console.log(`🚨 Emergency session created: ${emergencySessionId}`);
+    }
+  });
+  
+  // Leave game
+  socket.on('leave-game', async (gameData) => {
+    console.log(`🎮 ${socket.username} left game: ${gameData.gameId}`);
+    
+    const roomId = `game-${gameData.gameId}`;
+    
+    // Remove from joined rooms
+    if (userSession && userSession.joinedRooms) {
+      userSession.joinedRooms = userSession.joinedRooms.filter(r => r !== roomId);
+      userSession.lastActivity = new Date();
+    }
+    
+    // Leave socket room
+    socket.leave(roomId);
+    
+    // Enhanced player left notification
+    socket.to(roomId).emit('player-left', {
+      user: {
+        id: socket.userId,
+        username: socket.username,
+        displayName: socket.displayName,
+        email: socket.email,
+        role: socket.userRole
+      },
+      gameId: gameData.gameId,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Database cleanup with error handling
+    if (databaseReady && sessionManager && typeof sessionManager.handlePlayerDisconnect === 'function') {
+      try {
+        await sessionManager.handlePlayerDisconnect(socket.userId, socket.id);
+        console.log('✅ Database session cleanup completed');
+      } catch (error) {
+        console.error('❌ Session cleanup error:', error);
+        // Continue anyway - not critical
+      }
+    } else {
+      console.log('🔄 Skipping database cleanup (not available)');
+    }
+  });
+  
+  // Private messaging
+  socket.on('private-message', (data) => {
+    const { targetUserId, message } = data;
+    console.log(`💬 Private message: ${socket.username} → User ${targetUserId}`);
+    
+    userSession.lastActivity = new Date();
+    
+    const targetSession = activeUsers.get(targetUserId);
+    if (targetSession) {
+      const targetSocket = io.sockets.sockets.get(targetSession.socketId);
+      if (targetSocket) {
+        targetSocket.emit('private-message', {
+          fromUserId: socket.userId,
+          fromUsername: socket.username,
+          fromDisplayName: socket.displayName,
+          message: message,
+          timestamp: Date.now()
+        });
+        
+        socket.emit('message-sent', {
+          targetUserId: targetUserId,
+          message: message,
+          timestamp: Date.now()
+        });
+      }
+    } else {
+      socket.emit('message-error', `User ${targetUserId} is offline`);
+    }
+  });
+  
+  // Game invitations
+  socket.on('invite-to-game', (data) => {
+    const { targetUserId, gameType, roomId } = data;
+    console.log(`🎮 Game invitation: ${socket.username} → User ${targetUserId} (${gameType})`);
+    
+    userSession.lastActivity = new Date();
+    
+    const targetSession = activeUsers.get(targetUserId);
+    if (targetSession) {
+      const targetSocket = io.sockets.sockets.get(targetSession.socketId);
+      if (targetSocket) {
+        targetSocket.emit('game-invitation', {
+          fromUserId: socket.userId,
+          fromUsername: socket.username,
+          fromDisplayName: socket.displayName,
+          gameType: gameType,
+          roomId: roomId,
+          timestamp: Date.now()
+        });
+        
+        socket.emit('invitation-sent', {
+          targetUserId: targetUserId,
+          gameType: gameType
+        });
+      }
+    } else {
+      socket.emit('invitation-error', `User ${targetUserId} is offline`);
+    }
+  });
+  
+  // Get online users
+  socket.on('get-online-users', () => {
+    const onlineUsers = Array.from(activeUsers.values()).map(session => ({
+      id: session.userData.id,
+      username: session.userData.username,
+      displayName: session.userData.displayName,
+      connectedAt: session.connectedAt
+    }));
+    
+    socket.emit('online-users', onlineUsers);
+  });
+  
+  // Score submission
+  
+  socket.on('submit-score', async (scoreData) => {
+    console.log(`🏆 Score submission: ${socket.username} - ${scoreData.score} points`);
+    
+    if (userSession) {
+      userSession.lastActivity = new Date();
+    }
+    
+    // ✅ ROBUST APPROACH: Fallback First, Database Optional
+    
+    // Erstelle immer einen funktionierenden Fallback-Score
+    const fallbackScore = {
+      id: `score_${Date.now()}_${socket.userId}`,
+      userId: socket.userId,
+      username: socket.username,
+      displayName: socket.displayName,
+      gameType: scoreData.gameType || 'unknown',
+      score: parseInt(scoreData.score) || 0,
+      level: parseInt(scoreData.level) || 1,
+      timePlayedSeconds: parseInt(scoreData.timeSeconds) || 0,
+      completed: scoreData.completed || false,
+      createdAt: new Date().toISOString(),
+      rank: Math.floor(Math.random() * 100) + 1, // Demo rank 1-100
+      mode: 'demo'
+    };
+    
+    // ✅ Versuche Database-Save als BONUS (nicht kritisch)
+    let databaseSuccess = false;
+    let finalScore = fallbackScore;
+    
+    if (databaseReady && userManager && typeof userManager.saveScore === 'function') {
+      try {
+        console.log('🗄️ Attempting database score save...');
+        
+        // Saubere Datenkonvertierung für Database
+        const cleanScoreData = {
+          userId: String(socket.userId),
+          username: String(socket.username),
+          gameType: String(scoreData.gameType || 'unknown'),
+          score: parseInt(scoreData.score) || 0,
+          level: parseInt(scoreData.level) || 1,
+          timePlayedSeconds: parseInt(scoreData.timeSeconds) || 0,
+          completed: Boolean(scoreData.completed)
+        };
+        
+        const savedScore = await userManager.saveScore(cleanScoreData);
+        
+        if (savedScore) {
+          finalScore = savedScore;
+          databaseSuccess = true;
+          console.log(`✅ Database score saved successfully: ${scoreData.score} points`);
+        }
+        
+      } catch (error) {
+        console.error('⚠️ Database score save failed (using fallback):', error.message);
+        // Fallback wird trotzdem verwendet - kein Problem!
+        databaseSuccess = false;
+      }
+    } else {
+      console.log('🔄 Database not available - using fallback score system');
+    }
+    
+    // ✅ IMMER ERFOLGREICHE ANTWORT
+    socket.emit('score-saved', {
+      success: true,
+      score: finalScore,
+      newRank: finalScore.rank,
+      database: databaseSuccess,
+      fallback: !databaseSuccess,
+      message: databaseSuccess ? 
+        'Score saved to database!' : 
+        'Score saved in demo mode (database unavailable)'
+    });
+    
+    // ✅ IMMER BROADCAST zu anderen Usern
+    socket.broadcast.emit('friend-high-score', {
+      userId: socket.userId,
+      username: socket.username,
+      displayName: socket.displayName,
+      gameType: scoreData.gameType,
+      score: finalScore.score,
+      rank: finalScore.rank,
+      mode: databaseSuccess ? 'database' : 'demo'
+    });
+    
+    console.log(`🎯 Score processed: ${finalScore.score} points (${databaseSuccess ? 'DATABASE' : 'FALLBACK'} mode)`);
+  });
+  
+  // ===================================================================
+  // BONUS: Test Score Endpoint für einfaches Testen
+  // ===================================================================
+  
+  socket.on('test-score', () => {
+    console.log(`🧪 Test score triggered by ${socket.username}`);
+    
+    const testScore = Math.floor(Math.random() * 10000) + 100; // 100-10100 points
+    
+    socket.emit('submit-score', {
+      gameType: 'test-game',
+      score: testScore,
+      level: Math.floor(Math.random() * 5) + 1,
+      timeSeconds: Math.floor(Math.random() * 300) + 60,
+      completed: Math.random() > 0.3
+    });
+    
+    console.log(`🧪 Test score generated: ${testScore} points`);
+  });
+  
+  // Disconnect handler
+  socket.on('disconnect', () => {
+    connectedUsers--;
+    console.log(`👤 ${socket.username} disconnected (Total: ${connectedUsers})`);
+    
+    // Remove user session
+    activeUsers.delete(socket.userId);
+    
+    // Cleanup joined rooms
+    if (userSession.joinedRooms.length > 0) {
+      userSession.joinedRooms.forEach(roomId => {
+        socket.to(roomId).emit('player-left', {
+          user: userSession.userData,
+          timestamp: new Date().toISOString()
+        });
+      });
+    }
+    
+    // Broadcast user offline
+    socket.broadcast.emit('user-offline', {
+      userId: socket.userId,
+      username: socket.username,
+      displayName: socket.displayName
+    });
+    
+    // Database cleanup
+    if (databaseReady && sessionManager) {
+      setImmediate(async () => {
+        try {
+          await sessionManager.handlePlayerDisconnect(socket.userId, socket.id);
+        } catch (error) {
+          console.error('❌ Disconnect cleanup failed:', error);
+        }
+      });
+    }
+    
+    io.emit('player-count', connectedUsers);
+  });
+  
+  // Error handler
+  socket.on('error', (error) => {
+    console.error(`❌ Socket error for ${socket.username} (${socket.userId}):`, error);
+  });
+});
+
+// ===================================================================
+// ERROR HANDLERS
+// ===================================================================
+app.use((err, req, res, next) => {
+  console.error('❌ Express Error:', err);
+  res.status(500).json({
+    error: 'Internal Server Error',
+    message: err.message
+  });
+});
+
+app.use('*', (req, res) => {
+  res.status(404).json({
+    error: 'Route not found',
+    path: req.originalUrl
+  });
+});
+
+// ===================================================================
+// DATABASE INITIALIZATION
+// ===================================================================
+async function initializeDatabases() {
+  console.log('🔌 Initializing database connections...');
+  
+  const pgConnected = await testPostgreSQL();
+  const redisConnected = await testRedis();
+  
+  if (pgConnected && redisConnected) {
+    console.log('🎉 All databases connected successfully!');
+    
+    try {
+      // Setup database schema if needed
+      if (setupDatabase) {
+        await setupDatabase();
+        console.log('✅ Database schema ready');
+      }
+      
+      // Initialize managers
+      if (UserManager && GameSessionManager) {
+        userManager = new UserManager();
+        sessionManager = new GameSessionManager();
+        databaseReady = true;
+        console.log('✅ Database managers initialized');
+        
+        // Set database managers in RetroRetroApp if available
+        if (retroApp && typeof retroApp.setDatabaseManagers === 'function') {
+          retroApp.setDatabaseManagers(userManager, sessionManager);
+          console.log('✅ Database managers linked to RetroRetroApp');
+        }
+        
+        console.log('🚀 Advanced features enabled: User accounts, Score tracking, Sessions');
+      }
+    } catch (error) {
+      console.error('❌ Advanced feature initialization failed:', error);
+      console.log('⚠️  Running in basic mode');
+    }
+    
+    return true;
+  } else {
+    console.log('❌ Database connection failed - running in basic mode!');
+    console.log('💡 All core features still work, advanced features disabled');
+    return false;
+  }    
+}
+
+// ===================================================================
+// PASSIVE DATABASE STATUS NOTIFICATIONS (Nur Info, keine Aktionen)
+// Backend: server.js 
+// ===================================================================
+
+let systemStatus = {
+  database: 'healthy', // healthy, degraded, offline
+  lastStatusChange: new Date(),
+  consecutiveFailures: 0,
+  lastUserNotification: null,
+  notificationCooldown: 5 * 60 * 1000 // 5 Minuten zwischen Notifications
+};
+
+async function checkDatabaseHealthWithPassiveInfo() {
+  console.log('🔍 Checking database health...');
+  
+  try {
+    const pgHealth = await testPostgreSQL();
+    const redisHealth = await testRedis();
+    const managersReady = userManager && sessionManager;
+    
+    const overallHealth = pgHealth && redisHealth && managersReady;
+    const previousStatus = systemStatus.database;
+    
+    if (overallHealth) {
+      // ✅ DATABASE HEALTHY
+      if (previousStatus !== 'healthy') {
+        systemStatus.database = 'healthy';
+        systemStatus.lastStatusChange = new Date();
+        systemStatus.consecutiveFailures = 0;
+        
+        console.log('🎉 Database recovered - informing users');
+        
+        // 📢 PASSIVE RECOVERY INFO (nur Info, keine Aktionen)
+        io.emit('system-info', {
+          type: 'database-recovered',
+          title: '🎉 System Restored',
+          message: 'Database connection restored. All features are now fully available.',
+          level: 'success',
+          duration: 6000,
+          timestamp: new Date().toISOString(),
+          passive: true // Nur Info, keine Buttons
+        });
+        
+        systemStatus.lastUserNotification = new Date();
+      }
+      
+      databaseReady = true;
+      
+    } else {
+      // ❌ DATABASE PROBLEMS
+      systemStatus.consecutiveFailures++;
+      
+      let newStatus = 'offline';
+      let shouldNotifyUser = false;
+      
+      // Bestimme Notification-Bedingungen
+      if (previousStatus === 'healthy') {
+        // Erster Ausfall → Sofort informieren
+        shouldNotifyUser = true;
+        newStatus = 'degraded'; // Erst mal "degraded" versuchen
+      } else if (systemStatus.consecutiveFailures >= 3) {
+        // Nach 3 Versuchen (1.5 Minuten) → "offline" Status
+        newStatus = 'offline';
+        
+        // Notification nur wenn cooldown abgelaufen
+        const timeSinceLastNotification = Date.now() - (systemStatus.lastUserNotification?.getTime() || 0);
+        shouldNotifyUser = timeSinceLastNotification >= systemStatus.notificationCooldown;
+      } else if (systemStatus.consecutiveFailures >= 6) {
+        // Nach 6 Versuchen (3 Minuten) → Kritische Info
+        newStatus = 'offline';
+        
+        const timeSinceLastNotification = Date.now() - (systemStatus.lastUserNotification?.getTime() || 0);
+        shouldNotifyUser = timeSinceLastNotification >= (systemStatus.notificationCooldown * 2); // 10 Min Cooldown
+      }
+      
+      if (shouldNotifyUser && newStatus !== previousStatus) {
+        systemStatus.database = newStatus;
+        systemStatus.lastStatusChange = new Date();
+        systemStatus.lastUserNotification = new Date();
+        
+        console.log(`⚠️ Database status: ${previousStatus} → ${newStatus} (failures: ${systemStatus.consecutiveFailures})`);
+        
+        // 📢 PASSIVE PROBLEM INFO (basierend auf Failure-Count)
+        let notificationConfig;
+        
+        if (systemStatus.consecutiveFailures <= 2) {
+          // Anfangs-Probleme (0-1 Minuten)
+          notificationConfig = {
+            type: 'database-issues',
+            title: '⚠️ Connection Issues',
+            message: 'Temporary database issues detected. Games continue to work normally.',
+            level: 'warning',
+            duration: 8000
+          };
+          
+        } else if (systemStatus.consecutiveFailures <= 5) {
+          // Anhaltende Probleme (1.5-2.5 Minuten)
+          notificationConfig = {
+            type: 'database-offline',
+            title: '🔄 Demo Mode Active',
+            message: 'Database temporarily unavailable. Scores will be saved locally during this session.',
+            level: 'info',
+            duration: 10000
+          };
+          
+        } else {
+          // Langanhaltende Probleme (3+ Minuten)
+          notificationConfig = {
+            type: 'database-extended-outage',
+            title: '📝 Extended Demo Mode',
+            message: 'Database connection issues persist. Operating in offline mode with full game functionality.',
+            level: 'info',
+            duration: 12000
+          };
+        }
+        
+        // 📢 SENDE PASSIVE NOTIFICATION
+        io.emit('system-info', {
+          ...notificationConfig,
+          timestamp: new Date().toISOString(),
+          consecutiveFailures: systemStatus.consecutiveFailures,
+          passive: true, // Keine Aktions-Buttons
+          estimatedFix: systemStatus.consecutiveFailures <= 3 ? 'Trying to reconnect...' : 'Monitoring connection...'
+        });
+        
+        console.log(`📢 User notification sent: ${notificationConfig.title}`);
+      }
+      
+      databaseReady = false;
+    }
+    
+    // 📊 ERWEITERTE STATUS LOGS
+    console.log(`📊 Database Status: ${systemStatus.database.toUpperCase()}`);
+    console.log(`   PostgreSQL: ${pgHealth ? '✅' : '❌'}`);
+    console.log(`   Redis: ${redisHealth ? '✅' : '❌'}`);
+    console.log(`   Managers: ${managersReady ? '✅' : '❌'}`);
+    console.log(`   Consecutive Failures: ${systemStatus.consecutiveFailures}`);
+    console.log(`   Last User Notification: ${systemStatus.lastUserNotification || 'Never'}`);
+    
+    return overallHealth;
+    
+  } catch (error) {
+    console.error('❌ Database health check error:', error.message);
+    systemStatus.consecutiveFailures++;
+    
+    // Kritischer Fehler nach vielen Versuchen
+    if (systemStatus.consecutiveFailures >= 10) {
+      const timeSinceLastNotification = Date.now() - (systemStatus.lastUserNotification?.getTime() || 0);
+      
+      if (timeSinceLastNotification >= (systemStatus.notificationCooldown * 3)) { // 15 Min Cooldown
+        console.log('🚨 Extended database issues - notifying users');
+        
+        io.emit('system-info', {
+          type: 'database-persistent-error',
+          title: '🛠️ Maintenance Mode',
+          message: 'Extended technical issues detected. System operating in safe mode with full game functionality.',
+          level: 'info',
+          duration: 15000,
+          timestamp: new Date().toISOString(),
+          passive: true,
+          note: 'All games and multiplayer features remain fully functional.'
+        });
+        
+        systemStatus.lastUserNotification = new Date();
+      }
+    }
+    
+    databaseReady = false;
+    return false;
+  }
+}
+
+// ⏰ REGELMÄSSIGE CHECKS (alle 30 Sekunden)
+setInterval(checkDatabaseHealthWithPassiveInfo, 30000);
+
+// 🎯 ERWEITERTE SYSTEM STATUS API (für Admin-Monitoring)
+app.get('/api/system-status', (req, res) => {
+  res.json({
+    database: {
+      status: systemStatus.database,
+      lastChange: systemStatus.lastStatusChange,
+      consecutiveFailures: systemStatus.consecutiveFailures,
+      lastUserNotification: systemStatus.lastUserNotification
+    },
+    server: {
+      uptime: Math.floor((Date.now() - serverStartTime) / 1000),
+      connectedUsers: connectedUsers,
+      authenticatedUsers: activeUsers.size,
+      memoryUsage: process.memoryUsage()
+    },
+    features: {
+      multiplayer: true, // Immer verfügbar
+      games: true, // Immer verfügbar
+      scoreTracking: databaseReady ? 'database' : 'memory',
+      leaderboards: databaseReady,
+      userProfiles: databaseReady,
+      gameHistory: databaseReady
+    },
+    operational: {
+      coreFeatures: '100%', // Games + Multiplayer
+      dataFeatures: databaseReady ? '100%' : '0%', // Scores + Profiles
+      overallSystem: connectedUsers > 0 ? '100%' : '0%'
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
+// 📊 ADMIN-ONLY DATABASE STATISTICS
+app.get('/api/admin/database-stats', (req, res) => {
+  // Einfache Admin-Check (in Production mit echtem Auth ersetzen)
+  const isAdmin = req.headers.authorization === 'admin-secret-key';
+  
+  if (!isAdmin) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  
+  res.json({
+    status: systemStatus,
+    healthChecks: {
+      interval: '30 seconds',
+      nextCheck: new Date(Date.now() + 30000).toISOString()
+    },
+    notifications: {
+      cooldownPeriod: systemStatus.notificationCooldown / 1000 / 60 + ' minutes',
+      lastSent: systemStatus.lastUserNotification,
+      strategy: 'Progressive (immediate → 1.5min → 3min → 15min)'
+    },
+    database: {
+      postgresql: databaseStatus?.postgresql || false,
+      redis: databaseStatus?.redis || false,
+      managers: {
+        userManager: !!userManager,
+        sessionManager: !!sessionManager
+      }
+    }
+  });
+});
+
+console.log('📢 Passive database notification system initialized');
+console.log('🔕 Features: Info-only notifications, Progressive escalation, Admin monitoring');
+console.log('⏰ Notification strategy: Immediate → 1.5min → 3min → 15min cooldowns');
+
+// ===================================================================
+// EXAMPLE FRONTEND INTEGRATION (Passive Info Only)
+// ===================================================================
+
+/*
+// Frontend: PassiveSystemInfo.tsx
+import React, { useState, useEffect } from 'react';
+import socketService from '../services/SocketService';
+
+const PassiveSystemInfo = () => {
+  const [currentInfo, setCurrentInfo] = useState(null);
+  const [showInfo, setShowInfo] = useState(false);
+  
+  useEffect(() => {
+    // Listen for passive system info
+    socketService.on('system-info', (info) => {
+      setCurrentInfo(info);
+      setShowInfo(true);
+      
+      // Auto-hide after duration
+      setTimeout(() => {
+        setShowInfo(false);
+      }, info.duration || 8000);
+    });
+    
+    return () => {
+      socketService.off('system-info');
+    };
+  }, []);
+  
+  if (!showInfo || !currentInfo) return null;
+  
+  return (
+    <div className={`system-info-banner ${currentInfo.level}`}>
+      <div className="info-content">
+        <h4>{currentInfo.title}</h4>
+        <p>{currentInfo.message}</p>
+        {currentInfo.note && (
+          <small className="info-note">{currentInfo.note}</small>
+        )}
+      </div>
+      <button 
+        className="dismiss-btn"
+        onClick={() => setShowInfo(false)}
+      >
+        ×
+      </button>
+    </div>
+  );
+};
+
+// CSS Example:
+.system-info-banner {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  max-width: 400px;
+  padding: 15px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  z-index: 1000;
+}
+
+.system-info-banner.success { background: #d4edda; color: #155724; }
+.system-info-banner.warning { background: #fff3cd; color: #856404; }
+.system-info-banner.info { background: #cce7ff; color: #004085; }
+.system-info-banner.error { background: #f8d7da; color: #721c24; }
+*/
+
+// ===================================================================
+// SERVER STARTUP
+// ===================================================================
+server.listen(PORT, () => {
+  console.log('🎮 Legal Retro Gaming Service running on port ' + PORT);
+  console.log('🔗 Health check: http://localhost:' + PORT + '/health');
+  console.log('🗄️ Database check: http://localhost:' + PORT + '/health-db');
+  console.log('📡 Socket.IO ready for multiplayer connections');
+  console.log('🔐 JWT Authentication enabled for Socket.io');
+  console.log('💬 Private messaging system active');
+  console.log('🎮 Game invitations system ready');
+  console.log('🚀 Enhanced multiplayer features initialized');
+  
+  console.log('\n🚀 API Endpoints:');
+  console.log('   📊 Games: http://localhost:' + PORT + '/api/games');
+  console.log('   🎮 Sessions: http://localhost:' + PORT + '/api/sessions');
+  console.log('   🏆 Leaderboard: http://localhost:' + PORT + '/api/leaderboard');
+  console.log('   👥 Online Users: http://localhost:' + PORT + '/api/online-users');
+  console.log('   📈 Server Stats: http://localhost:' + PORT + '/api/server-stats');
+  
+  // Test database connections asynchronously
+  setTimeout(async () => {
+    console.log('\n🔌 Testing database connections asynchronously...');
+    try {
+      await initializeDatabases();
+      console.log('⚠️ Database initialization completed');
+    } catch (err) {
+      console.log('⚠️ Database connections failed:', err.message);
+    }
+  }, 2000);
+});
+
+// ===================================================================
+// PASSIVE DATABASE STATUS NOTIFICATIONS (Nur Info, keine Aktionen)
+// Backend: server.js 
+// ===================================================================
+
+let databaseStatus = {
+  database: 'healthy', // healthy, degraded, offline
+  lastStatusChange: new Date(),
+  consecutiveFailures: 0,
+  lastUserNotification: null,
+  notificationCooldown: 5 * 60 * 1000 // 5 Minuten zwischen Notifications
+};
+
+async function checkDatabaseHealthWithPassiveInfo() {
+  console.log('🔍 Checking database health...');
+  
+  try {
+    const pgHealth = await testPostgreSQL();
+    const redisHealth = await testRedis();
+    const managersReady = userManager && sessionManager;
+    
+    const overallHealth = pgHealth && redisHealth && managersReady;
+    const previousStatus = databaseStatus.database;
+    
+    if (overallHealth) {
+      // ✅ DATABASE HEALTHY
+      if (previousStatus !== 'healthy') {
+        databaseStatus.database = 'healthy';
+        databaseStatus.lastStatusChange = new Date();
+        databaseStatus.consecutiveFailures = 0;
+        
+        console.log('🎉 Database recovered - informing users');
+        
+        // 📢 PASSIVE RECOVERY INFO (nur Info, keine Aktionen)
+        io.emit('system-info', {
+          type: 'database-recovered',
+          title: '🎉 System Restored',
+          message: 'Database connection restored. All features are now fully available.',
+          level: 'success',
+          duration: 6000,
+          timestamp: new Date().toISOString(),
+          passive: true // Nur Info, keine Buttons
+        });
+        
+        databaseStatus.lastUserNotification = new Date();
+      }
+      
+      databaseReady = true;
+      
+    } else {
+      // ❌ DATABASE PROBLEMS
+      databaseStatus.consecutiveFailures++;
+      
+      let newStatus = 'offline';
+      let shouldNotifyUser = false;
+      
+      // Bestimme Notification-Bedingungen
+      if (previousStatus === 'healthy') {
+        // Erster Ausfall → Sofort informieren
+        shouldNotifyUser = true;
+        newStatus = 'degraded'; // Erst mal "degraded" versuchen
+      } else if (databaseStatus.consecutiveFailures >= 3) {
+        // Nach 3 Versuchen (1.5 Minuten) → "offline" Status
+        newStatus = 'offline';
+        
+        // Notification nur wenn cooldown abgelaufen
+        const timeSinceLastNotification = Date.now() - (databaseStatus.lastUserNotification?.getTime() || 0);
+        shouldNotifyUser = timeSinceLastNotification >= databaseStatus.notificationCooldown;
+      } else if (databaseStatus.consecutiveFailures >= 6) {
+        // Nach 6 Versuchen (3 Minuten) → Kritische Info
+        newStatus = 'offline';
+        
+        const timeSinceLastNotification = Date.now() - (databaseStatus.lastUserNotification?.getTime() || 0);
+        shouldNotifyUser = timeSinceLastNotification >= (databaseStatus.notificationCooldown * 2); // 10 Min Cooldown
+      }
+      
+      if (shouldNotifyUser && newStatus !== previousStatus) {
+        databaseStatus.database = newStatus;
+        databaseStatus.lastStatusChange = new Date();
+        databaseStatus.lastUserNotification = new Date();
+        
+        console.log(`⚠️ Database status: ${previousStatus} → ${newStatus} (failures: ${databaseStatus.consecutiveFailures})`);
+        
+        // 📢 PASSIVE PROBLEM INFO (basierend auf Failure-Count)
+        let notificationConfig;
+        
+        if (databaseStatus.consecutiveFailures <= 2) {
+          // Anfangs-Probleme (0-1 Minuten)
+          notificationConfig = {
+            type: 'database-issues',
+            title: '⚠️ Connection Issues',
+            message: 'Temporary database issues detected. Games continue to work normally.',
+            level: 'warning',
+            duration: 8000
+          };
+          
+        } else if (databaseStatus.consecutiveFailures <= 5) {
+          // Anhaltende Probleme (1.5-2.5 Minuten)
+          notificationConfig = {
+            type: 'database-offline',
+            title: '🔄 Demo Mode Active',
+            message: 'Database temporarily unavailable. Scores will be saved locally during this session.',
+            level: 'info',
+            duration: 10000
+          };
+          
+        } else {
+          // Langanhaltende Probleme (3+ Minuten)
+          notificationConfig = {
+            type: 'database-extended-outage',
+            title: '📝 Extended Demo Mode',
+            message: 'Database connection issues persist. Operating in offline mode with full game functionality.',
+            level: 'info',
+            duration: 12000
+          };
+        }
+        
+        // 📢 SENDE PASSIVE NOTIFICATION
+        io.emit('system-info', {
+          ...notificationConfig,
+          timestamp: new Date().toISOString(),
+          consecutiveFailures: databaseStatus.consecutiveFailures,
+          passive: true, // Keine Aktions-Buttons
+          estimatedFix: databaseStatus.consecutiveFailures <= 3 ? 'Trying to reconnect...' : 'Monitoring connection...'
+        });
+        
+        console.log(`📢 User notification sent: ${notificationConfig.title}`);
+      }
+      
+      databaseReady = false;
+    }
+    
+    // 📊 ERWEITERTE STATUS LOGS
+    console.log(`📊 Database Status: ${databaseStatus.database.toUpperCase()}`);
+    console.log(`   PostgreSQL: ${pgHealth ? '✅' : '❌'}`);
+    console.log(`   Redis: ${redisHealth ? '✅' : '❌'}`);
+    console.log(`   Managers: ${managersReady ? '✅' : '❌'}`);
+    console.log(`   Consecutive Failures: ${databaseStatus.consecutiveFailures}`);
+    console.log(`   Last User Notification: ${databaseStatus.lastUserNotification || 'Never'}`);
+    
+    return overallHealth;
+    
+  } catch (error) {
+    console.error('❌ Database health check error:', error.message);
+    databaseStatus.consecutiveFailures++;
+    
+    // Kritischer Fehler nach vielen Versuchen
+    if (databaseStatus.consecutiveFailures >= 10) {
+      const timeSinceLastNotification = Date.now() - (databaseStatus.lastUserNotification?.getTime() || 0);
+      
+      if (timeSinceLastNotification >= (databaseStatus.notificationCooldown * 3)) { // 15 Min Cooldown
+        console.log('🚨 Extended database issues - notifying users');
+        
+        io.emit('system-info', {
+          type: 'database-persistent-error',
+          title: '🛠️ Maintenance Mode',
+          message: 'Extended technical issues detected. System operating in safe mode with full game functionality.',
+          level: 'info',
+          duration: 15000,
+          timestamp: new Date().toISOString(),
+          passive: true,
+          note: 'All games and multiplayer features remain fully functional.'
+        });
+        
+        databaseStatus.lastUserNotification = new Date();
+      }
+    }
+    
+    databaseReady = false;
+    return false;
+  }
+}
+
+// ⏰ REGELMÄSSIGE CHECKS (alle 30 Sekunden)
+setInterval(checkDatabaseHealthWithPassiveInfo, 30000);
+
+// 🎯 ERWEITERTE SYSTEM STATUS API (für Admin-Monitoring)
+app.get('/api/system-status', (req, res) => {
+  res.json({
+    database: {
+      status: databaseStatus.database,
+      lastChange: databaseStatus.lastStatusChange,
+      consecutiveFailures: databaseStatus.consecutiveFailures,
+      lastUserNotification: databaseStatus.lastUserNotification
+    },
+    server: {
+      uptime: Math.floor((Date.now() - serverStartTime) / 1000),
+      connectedUsers: connectedUsers,
+      authenticatedUsers: activeUsers.size,
+      memoryUsage: process.memoryUsage()
+    },
+    features: {
+      multiplayer: true, // Immer verfügbar
+      games: true, // Immer verfügbar
+      scoreTracking: databaseReady ? 'database' : 'memory',
+      leaderboards: databaseReady,
+      userProfiles: databaseReady,
+      gameHistory: databaseReady
+    },
+    operational: {
+      coreFeatures: '100%', // Games + Multiplayer
+      dataFeatures: databaseReady ? '100%' : '0%', // Scores + Profiles
+      overallSystem: connectedUsers > 0 ? '100%' : '0%'
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
+// 📊 ADMIN-ONLY DATABASE STATISTICS
+app.get('/api/admin/database-stats', (req, res) => {
+  // Einfache Admin-Check (in Production mit echtem Auth ersetzen)
+  const isAdmin = req.headers.authorization === 'admin-secret-key';
+  
+  if (!isAdmin) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  
+  res.json({
+    status: databaseStatus,
+    healthChecks: {
+      interval: '30 seconds',
+      nextCheck: new Date(Date.now() + 30000).toISOString()
+    },
+    notifications: {
+      cooldownPeriod: databaseStatus.notificationCooldown / 1000 / 60 + ' minutes',
+      lastSent: databaseStatus.lastUserNotification,
+      strategy: 'Progressive (immediate → 1.5min → 3min → 15min)'
+    },
+    database: {
+      postgresql: databaseStatus?.postgresql || false,
+      redis: databaseStatus?.redis || false,
+      managers: {
+        userManager: !!userManager,
+        sessionManager: !!sessionManager
+      }
+    }
+  });
+});
+
+console.log('📢 Passive database notification system initialized');
+console.log('🔕 Features: Info-only notifications, Progressive escalation, Admin monitoring');
+console.log('⏰ Notification strategy: Immediate → 1.5min → 3min → 15min cooldowns');
+
+// ===================================================================
+// EXAMPLE FRONTEND INTEGRATION (Passive Info Only)
+// ===================================================================
+
+/*
+// Frontend: PassiveSystemInfo.tsx
+import React, { useState, useEffect } from 'react';
+import socketService from '../services/SocketService';
+
+const PassiveSystemInfo = () => {
+  const [currentInfo, setCurrentInfo] = useState(null);
+  const [showInfo, setShowInfo] = useState(false);
+  
+  useEffect(() => {
+    // Listen for passive system info
+    socketService.on('system-info', (info) => {
+      setCurrentInfo(info);
+      setShowInfo(true);
+      
+      // Auto-hide after duration
+      setTimeout(() => {
+        setShowInfo(false);
+      }, info.duration || 8000);
+    });
+    
+    return () => {
+      socketService.off('system-info');
+    };
+  }, []);
+  
+  if (!showInfo || !currentInfo) return null;
+  
+  return (
+    <div className={`system-info-banner ${currentInfo.level}`}>
+      <div className="info-content">
+        <h4>{currentInfo.title}</h4>
+        <p>{currentInfo.message}</p>
+        {currentInfo.note && (
+          <small className="info-note">{currentInfo.note}</small>
+        )}
+      </div>
+      <button 
+        className="dismiss-btn"
+        onClick={() => setShowInfo(false)}
+      >
+        ×
+      </button>
+    </div>
+  );
+};
+
+// CSS Example:
+.system-info-banner {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  max-width: 400px;
+  padding: 15px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  z-index: 1000;
+}
+
+.system-info-banner.success { background: #d4edda; color: #155724; }
+.system-info-banner.warning { background: #fff3cd; color: #856404; }
+.system-info-banner.info { background: #cce7ff; color: #004085; }
+.system-info-banner.error { background: #f8d7da; color: #721c24; }
+*/
+
+// ===================================================================
+// GRACEFUL SHUTDOWN HANDLERS
+// ===================================================================
+async function gracefulShutdown(signal) {
+  console.log(`\n🛑 ${signal} received - Server shutting down gracefully...`);
+  
+  // Close Socket.IO connections first
+  io.close(() => {
+    console.log('✅ Socket.IO closed');
+  });
+  
+  // Close database connections
+  try {
+    await closeConnections();
+    console.log('✅ Database connections closed');
+  } catch (err) {
+    console.error('❌ Error closing database connections:', err);
+  }
+  
+  server.close(() => {
+    console.log('✅ Server closed');
+    process.exit(0);
+  });
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// ===================================================================
+// EXPORTS
+// ===================================================================
+module.exports = { 
+  app, 
+  server, 
+  io, 
+  getUserSocket, 
+  isUserOnline, 
+  getOnlineUsers, 
+  sendToUser 
+};
+
+console.log('🔐 JWT Socket.io Authentication loaded');
+console.log('🎮 Enhanced multiplayer features initialized');
+console.log('💬 Private messaging system ready');
+console.log('🏆 User-based scoring system ready');

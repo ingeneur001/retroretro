@@ -1,0 +1,677 @@
+#!/usr/bin/env python3
+"""
+Daily Standup Automation - Standalone Script
+Integrates with existing progress_tracker.py data
+Morning planning, Evening recap, Weekly summaries
+"""
+
+import json
+import os
+import sys
+import argparse
+from datetime import datetime, timedelta
+from pathlib import Path
+import random
+
+class DailyStandup:
+    def __init__(self):
+        # Auto-detect project root (same logic as progress_tracker.py)
+        current_dir = Path.cwd()
+        
+        if current_dir.name == "scripts":
+            self.project_root = current_dir.parent
+            print(f"📁 Detected: scripts/ - using root: {self.project_root.absolute()}")
+        else:
+            self.project_root = current_dir
+            print(f"📁 Using current directory: {self.project_root.absolute()}")
+        
+        # Use same paths as progress_tracker.py
+        self.docs_development = self.project_root / "docs" / "development"
+        self.progress_json = self.docs_development / "progress.json"
+        
+        # Load existing progress data
+        self.progress_data = self._load_progress_data()
+    
+    def _load_progress_data(self):
+        """Load progress data from existing progress.json"""
+        if not self.progress_json.exists():
+            print(f"❌ Progress data not found: {self.progress_json}")
+            print("💡 Run 'python progress_tracker.py status' first to initialize data")
+            sys.exit(1)
+        
+        try:
+            with open(self.progress_json, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"❌ Error loading progress data: {e}")
+            sys.exit(1)
+    
+    def _save_progress_data(self):
+        """Save progress data back to progress.json"""
+        self.progress_data["last_update"] = datetime.now().isoformat()
+        try:
+            with open(self.progress_json, 'w', encoding='utf-8') as f:
+                json.dump(self.progress_data, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            print(f"❌ Error saving progress data: {e}")
+    
+    # ========================================
+    # MORNING STANDUP
+    # ========================================
+    
+    def morning_standup(self):
+        """Morning standup - today's game plan"""
+        now = datetime.now()
+        today = now.strftime("%A, %B %d, %Y")
+        
+        print("\n" + "=" * 65)
+        print(f"☀️ GOOD MORNING! Today's Game Plan")
+        print(f"📅 {today}")
+        print("=" * 65)
+        
+        # Project overview
+        self._show_project_overview()
+        
+        # Today's focus items
+        focus_items = self._get_todays_focus_items()
+        total_focus_hours = sum(item['hours'] for item in focus_items)
+        
+        print(f"\n🔥 TODAY'S FOCUS ITEMS (Est. {total_focus_hours}h):")
+        print("-" * 50)
+        
+        if not focus_items:
+            print("   🎉 No active priorities - all caught up!")
+            print("   💡 Consider planning next phase or tackling quick wins")
+        else:
+            for i, item in enumerate(focus_items, 1):
+                priority_icon = {"critical": "🔴", "high": "🟠", "medium": "🟡", "low": "🟢"}.get(item["priority"], "⚪")
+                print(f"   {i}. {priority_icon} {item['task']:<40} ({item['hours']}h)")
+                if item.get("reason"):
+                    print(f"      💡 {item['reason']}")
+        
+        # Quick wins
+        quick_wins = self._get_quick_wins()
+        if quick_wins:
+            total_quick_time = sum(win.get("time", 30) for win in quick_wins)
+            print(f"\n⚡ QUICK WINS ({total_quick_time} minutes total):")
+            print("-" * 30)
+            for win in quick_wins:
+                print(f"   • {win['task']} ({win.get('time', 30)}min)")
+        
+        # Progress insights
+        insights = self._get_progress_insights()
+        print(f"\n📊 PROGRESS INSIGHTS:")
+        print("-" * 30)
+        for insight in insights:
+            print(f"   {insight}")
+        
+        # Success tip
+        tip = self._get_daily_success_tip()
+        print(f"\n🎯 SUCCESS TIP:")
+        print(f"   {tip}")
+        
+        # Suggested schedule
+        if focus_items or quick_wins:
+            schedule = self._suggest_daily_schedule(focus_items, quick_wins)
+            print(f"\n📅 SUGGESTED SCHEDULE:")
+            print("-" * 30)
+            for time_block in schedule:
+                print(f"   {time_block}")
+        
+        print("\n" + "=" * 65)
+        print("💪 Let's make today productive! Start with high-energy tasks first.")
+        print("🧠 Use: python progress_tracker.py work TAG_X hours 'description'")
+        print("=" * 65)
+        print()
+    
+    def _show_project_overview(self):
+        """Show current project status"""
+        total_hours = sum(tag["hours"] for tag in self.progress_data["tags"].values())
+        current_tag = self.progress_data.get("current_tag", "TAG_5")
+        current_tag_data = self.progress_data["tags"].get(current_tag, {})
+        current_progress = current_tag_data.get("hours", 0)
+        planned_hours = current_tag_data.get("planned_hours", 20)
+        
+        progress_pct = (current_progress / planned_hours * 100) if planned_hours > 0 else 0
+        
+        print(f"\n🎯 PROJECT OVERVIEW:")
+        print(f"   Current TAG: {current_tag}")
+        print(f"   Progress: {current_progress}/{planned_hours}h ({progress_pct:.0f}%)")
+        print(f"   Total Hours: {total_hours}")
+        
+        # Show completion status
+        if progress_pct >= 90:
+            print(f"   🎉 Almost done with {current_tag}!")
+        elif progress_pct >= 75:
+            print(f"   🚀 {current_tag} in final stretch!")
+        elif progress_pct >= 50:
+            print(f"   📈 {current_tag} making good progress!")
+        else:
+            print(f"   ⚡ {current_tag} getting started!")
+    
+    def _get_todays_focus_items(self):
+        """Get today's focus items from active priorities"""
+        active_priorities = [
+            p for p in self.progress_data.get("current_priorities", [])
+            if p.get("status", "active") != "completed"
+        ]
+        
+        focus_items = []
+        for priority in active_priorities[:3]:  # Top 3 priorities
+            estimated_hours = priority.get("estimated_hours", 2)
+            
+            # Check if overdue
+            deadline = priority.get("deadline")
+            is_overdue = False
+            if deadline and deadline != "TBD":
+                try:
+                    deadline_date = datetime.strptime(deadline, "%Y-%m-%d")
+                    is_overdue = deadline_date < datetime.now()
+                except:
+                    pass
+            
+            focus_items.append({
+                "task": priority["task"],
+                "hours": estimated_hours,
+                "priority": priority.get("priority", "medium"),
+                "reason": priority.get("reason", ""),
+                "deadline": deadline,
+                "overdue": is_overdue
+            })
+        
+        # Sort by priority (critical first) and overdue status
+        priority_order = {"critical": 1, "high": 2, "medium": 3, "low": 4}
+        focus_items.sort(key=lambda x: (0 if x["overdue"] else 1, priority_order.get(x["priority"], 5)))
+        
+        return focus_items
+    
+    def _get_quick_wins(self):
+        """Generate contextual quick wins"""
+        # Base quick wins
+        base_wins = [
+            {"task": "Update project README with recent changes", "time": 15},
+            {"task": "Fix minor CSS/styling issues", "time": 30},
+            {"task": "Code cleanup and formatting", "time": 20},
+            {"task": "Update package dependencies", "time": 10},
+            {"task": "Write/update unit tests", "time": 45},
+            {"task": "Review and organize TODO comments", "time": 25},
+            {"task": "Optimize imports and unused code", "time": 20},
+            {"task": "Update documentation comments", "time": 30}
+        ]
+        
+        # Return 3 random quick wins
+        return random.sample(base_wins, min(3, len(base_wins)))
+    
+    def _get_progress_insights(self):
+        """Generate actionable progress insights"""
+        insights = []
+        
+        # Current TAG insight
+        current_tag = self.progress_data.get("current_tag", "TAG_5")
+        current_tag_data = self.progress_data["tags"].get(current_tag, {})
+        current_hours = current_tag_data.get("hours", 0)
+        planned_hours = current_tag_data.get("planned_hours", 20)
+        
+        if planned_hours > 0:
+            progress_pct = (current_hours / planned_hours * 100)
+            remaining_hours = planned_hours - current_hours
+            
+            if progress_pct >= 80:
+                insights.append(f"🎉 {current_tag} is {progress_pct:.0f}% complete - {remaining_hours:.1f}h to finish!")
+            elif progress_pct >= 50:
+                insights.append(f"📈 {current_tag} is {progress_pct:.0f}% complete - {remaining_hours:.1f}h remaining")
+            else:
+                insights.append(f"🚀 {current_tag} is {progress_pct:.0f}% complete - need {remaining_hours:.1f}h more")
+        
+        # Velocity insight
+        daily_velocity = self._calculate_daily_velocity()
+        if daily_velocity >= 4:
+            insights.append(f"⚡ High velocity: {daily_velocity:.1f}h/day - you're on fire!")
+        elif daily_velocity >= 2:
+            insights.append(f"📊 Steady pace: {daily_velocity:.1f}h/day - consistent progress")
+        else:
+            insights.append(f"📈 Boost needed: {daily_velocity:.1f}h/day - aim for 3-4h today")
+        
+        # Priority insight
+        overdue_count = len([
+            p for p in self.progress_data.get("current_priorities", [])
+            if p.get("status", "active") != "completed" and self._is_overdue(p.get("deadline"))
+        ])
+        
+        if overdue_count > 0:
+            insights.append(f"⚠️ {overdue_count} priority(ies) overdue - tackle these first!")
+        else:
+            insights.append(f"✅ All priorities on track - good planning!")
+        
+        return insights
+    
+    def _is_overdue(self, deadline):
+        """Check if deadline is overdue"""
+        if not deadline or deadline == "TBD":
+            return False
+        try:
+            deadline_date = datetime.strptime(deadline, "%Y-%m-%d")
+            return deadline_date < datetime.now()
+        except:
+            return False
+    
+    def _get_daily_success_tip(self):
+        """Get contextual success tip"""
+        tips = [
+            "Start with the most challenging task when your energy is highest!",
+            "Use timeboxing: Set a timer for focused 45-minute work sessions.",
+            "Break large tasks into smaller, 1-2 hour chunks for momentum.",
+            "Minimize distractions: close unnecessary browser tabs and apps.",
+            "Take a 5-minute break every hour to maintain focus.",
+            "Document decisions as you go - future you will thank you!",
+            "Test functionality early and often, don't save it for the end.",
+            "If stuck, take a 10-minute walk or explain the problem out loud."
+        ]
+        
+        return random.choice(tips)
+    
+    def _suggest_daily_schedule(self, focus_items, quick_wins):
+        """Generate realistic daily schedule"""
+        schedule = []
+        current_time = datetime.now().replace(hour=9, minute=0, second=0, microsecond=0)
+        
+        # Morning planning
+        schedule.append("09:00 - Daily standup & planning (15min)")
+        current_time = current_time.replace(hour=9, minute=15)
+        
+        # Focus items
+        for i, item in enumerate(focus_items):
+            hours = item["hours"]
+            end_time = current_time + timedelta(hours=hours)
+            
+            task_name = item["task"][:35] + "..." if len(item["task"]) > 35 else item["task"]
+            overdue_flag = " ⚠️" if item.get("overdue") else ""
+            
+            schedule.append(f"{current_time.strftime('%H:%M')} - {end_time.strftime('%H:%M')} {task_name}{overdue_flag}")
+            
+            current_time = end_time
+            
+            # Add break after each focus item (except last)
+            if i < len(focus_items) - 1:
+                current_time += timedelta(minutes=15)
+                schedule.append(f"{current_time.strftime('%H:%M')} - Break (15min)")
+        
+        # Quick wins block
+        if quick_wins:
+            total_quick_time = sum(win.get("time", 30) for win in quick_wins)
+            end_time = current_time + timedelta(minutes=total_quick_time)
+            schedule.append(f"{current_time.strftime('%H:%M')} - {end_time.strftime('%H:%M')} Quick wins block")
+            current_time = end_time
+        
+        # Evening wrap-up
+        current_time += timedelta(minutes=15)  # Small break
+        end_time = current_time + timedelta(minutes=15)
+        schedule.append(f"{current_time.strftime('%H:%M')} - {end_time.strftime('%H:%M')} Evening recap & tomorrow planning")
+        
+        return schedule
+    
+    def _calculate_daily_velocity(self):
+        """Calculate recent daily velocity"""
+        recent_logs = self.progress_data.get("daily_logs", [])[-21:]  # Last 3 weeks
+        
+        if not recent_logs:
+            return 2.5  # Default estimate
+        
+        # Group by date and sum hours
+        daily_hours = {}
+        for log in recent_logs:
+            if log.get("action") == "hours_added":
+                log_date = log["date"][:10]  # YYYY-MM-DD
+                hours = log.get("hours", 0)
+                daily_hours[log_date] = daily_hours.get(log_date, 0) + hours
+        
+        if not daily_hours:
+            return 2.5
+        
+        # Calculate average, excluding days with 0 hours
+        active_days = [hours for hours in daily_hours.values() if hours > 0]
+        return sum(active_days) / len(active_days) if active_days else 2.5
+    
+    # ========================================
+    # EVENING RECAP
+    # ========================================
+    
+    def evening_recap(self, hours_worked, work_description=""):
+        """Evening recap - log work and plan tomorrow"""
+        now = datetime.now()
+        today = now.strftime("%A, %B %d, %Y")
+        
+        print("\n" + "=" * 65)
+        print(f"🌙 EVENING RECAP")
+        print(f"📅 {today}")
+        print("=" * 65)
+        
+        # Log work through progress_tracker system
+        current_tag = self.progress_data.get("current_tag", "TAG_5")
+        old_hours = self.progress_data["tags"][current_tag].get("hours", 0)
+        
+        # Add hours and smart detection (simulate progress_tracker behavior)
+        self._log_work(current_tag, hours_worked, work_description)
+        new_hours = self.progress_data["tags"][current_tag]["hours"]
+        
+        print(f"\n📝 TODAY'S WORK LOGGED:")
+        print(f"   Hours Worked: {hours_worked}")
+        print(f"   {current_tag}: {old_hours}h → {new_hours}h (+{hours_worked}h)")
+        if work_description:
+            print(f"   Description: {work_description}")
+        
+        # Detect completions
+        completed_today = self._detect_and_process_completions(work_description)
+        if completed_today:
+            print(f"\n🎉 COMPLETIONS DETECTED:")
+            for completion in completed_today:
+                print(f"   ✅ {completion}")
+        
+        # Daily metrics
+        daily_velocity = self._calculate_daily_velocity()
+        print(f"\n📈 PRODUCTIVITY METRICS:")
+        print(f"   Today: {hours_worked}h")
+        print(f"   Recent average: {daily_velocity:.1f}h/day")
+        
+        # Velocity feedback
+        if hours_worked >= daily_velocity * 1.2:
+            print(f"   🔥 Above average! High productivity day!")
+        elif hours_worked >= daily_velocity * 0.8:
+            print(f"   📈 Solid day! Consistent with your pace.")
+        else:
+            print(f"   📊 Below average - consider what affected productivity.")
+        
+        # Progress update
+        self._show_evening_progress_update()
+        
+        # Tomorrow planning
+        tomorrow_plan = self._generate_tomorrow_plan(hours_worked, completed_today)
+        print(f"\n🌅 TOMORROW'S PLAN:")
+        print("-" * 30)
+        for item in tomorrow_plan:
+            print(f"   {item}")
+        
+        # Motivational close
+        motivation = self._get_evening_motivation(hours_worked, len(completed_today))
+        print(f"\n💪 REFLECTION:")
+        print(f"   {motivation}")
+        
+        print("\n" + "=" * 65)
+        print("😴 Great work today! Rest well - tomorrow brings new opportunities.")
+        print("🌅 Run: python daily_standup.py morning (for tomorrow's plan)")
+        print("=" * 65)
+        print()
+    
+    def _log_work(self, tag_name, hours, description):
+        """Log work (simplified version of progress_tracker logic)"""
+        # Add hours to current TAG
+        self.progress_data["tags"][tag_name]["hours"] += hours
+        
+        # Add to daily logs
+        log_entry = {
+            "date": datetime.now().isoformat(),
+            "action": "hours_added",
+            "tag": tag_name,
+            "hours": hours,
+            "notes": description,
+            "source": "daily_standup"
+        }
+        
+        self.progress_data.setdefault("daily_logs", []).append(log_entry)
+        self._save_progress_data()
+    
+    def _detect_and_process_completions(self, work_description):
+        """Detect completions from work description"""
+        if not work_description:
+            return []
+        
+        completion_keywords = ["completed", "finished", "done", "fixed", "resolved", "implemented"]
+        
+        completions = []
+        description_lower = work_description.lower()
+        
+        # Simple keyword detection
+        for keyword in completion_keywords:
+            if keyword in description_lower:
+                # Try to match with active priorities
+                active_priorities = [
+                    p for p in self.progress_data.get("current_priorities", [])
+                    if p.get("status", "active") != "completed"
+                ]
+                
+                for priority in active_priorities:
+                    task_words = priority["task"].lower().split()
+                    desc_words = description_lower.split()
+                    
+                    # If 2+ words match, consider it a completion
+                    matches = sum(1 for word in task_words if word in desc_words and len(word) > 3)
+                    if matches >= 2:
+                        priority["status"] = "completed"
+                        priority["completion_date"] = datetime.now().strftime("%Y-%m-%d")
+                        priority["completed_via"] = "daily_standup"
+                        completions.append(priority["task"])
+                        
+                        # Add completion log
+                        self.progress_data.setdefault("daily_logs", []).append({
+                            "date": datetime.now().isoformat(),
+                            "action": "priority_completed",
+                            "task": priority["task"],
+                            "method": "evening_recap",
+                            "source": "daily_standup"
+                        })
+                
+                break  # Only process first completion keyword found
+        
+        if completions:
+            self._save_progress_data()
+        
+        return completions
+    
+    def _show_evening_progress_update(self):
+        """Show progress update for evening"""
+        current_tag = self.progress_data.get("current_tag", "TAG_5")
+        current_tag_data = self.progress_data["tags"].get(current_tag, {})
+        current_hours = current_tag_data.get("hours", 0)
+        planned_hours = current_tag_data.get("planned_hours", 20)
+        
+        progress_pct = (current_hours / planned_hours * 100) if planned_hours > 0 else 0
+        remaining_hours = max(0, planned_hours - current_hours)
+        
+        print(f"\n📊 PROGRESS UPDATE:")
+        print(f"   {current_tag}: {current_hours:.1f}/{planned_hours}h ({progress_pct:.0f}%)")
+        
+        # Progress bar (simple ASCII)
+        bar_length = 20
+        filled_length = int(bar_length * progress_pct / 100)
+        bar = "█" * filled_length + "░" * (bar_length - filled_length)
+        print(f"   Progress: [{bar}]")
+        
+        if remaining_hours <= 1:
+            print(f"   🎯 Almost done! {remaining_hours:.1f}h left - finish tomorrow!")
+        elif remaining_hours <= 3:
+            print(f"   🚀 Final stretch! {remaining_hours:.1f}h remaining")
+        else:
+            print(f"   📈 Keep going! {remaining_hours:.1f}h to complete {current_tag}")
+    
+    def _generate_tomorrow_plan(self, hours_worked_today, completions_today):
+        """Generate tomorrow's focus plan"""
+        plan = []
+        
+        # Adjust based on today's productivity
+        if hours_worked_today >= 5:
+            plan.append("🔥 High productivity streak! Tackle the hardest priority first.")
+        elif hours_worked_today >= 3:
+            plan.append("📈 Good momentum! Continue with current focus.")
+        elif hours_worked_today >= 1:
+            plan.append("⚡ Build momentum! Start with quick wins for energy.")
+        else:
+            plan.append("🌱 Fresh start! Set realistic goals and build confidence.")
+        
+        # Priority-based planning
+        active_priorities = [
+            p for p in self.progress_data.get("current_priorities", [])
+            if p.get("status", "active") != "completed"
+        ]
+        
+        if active_priorities:
+            # Sort by urgency (overdue first, then by priority)
+            active_priorities.sort(key=lambda x: (
+                0 if self._is_overdue(x.get("deadline")) else 1,
+                {"critical": 1, "high": 2, "medium": 3, "low": 4}.get(x.get("priority", "medium"), 5)
+            ))
+            
+            plan.append(f"🎯 Primary focus: {active_priorities[0]['task']}")
+            if len(active_priorities) > 1:
+                plan.append(f"🎯 Secondary: {active_priorities[1]['task']}")
+        
+        # TAG-based planning
+        current_tag = self.progress_data.get("current_tag", "TAG_5")
+        current_tag_data = self.progress_data["tags"].get(current_tag, {})
+        remaining_hours = max(0, current_tag_data.get("planned_hours", 20) - current_tag_data.get("hours", 0))
+        
+        if remaining_hours <= 2:
+            plan.append(f"🏁 Finish {current_tag} - only {remaining_hours:.1f}h left!")
+        elif remaining_hours <= 5:
+            plan.append(f"⚡ Push {current_tag} forward - {remaining_hours:.1f}h remaining")
+        
+        # Completion momentum
+        if completions_today:
+            plan.append("🎉 Great completion momentum! Keep the wins coming.")
+        
+        plan.append("📅 Start day with: python daily_standup.py morning")
+        
+        return plan
+    
+    def _get_evening_motivation(self, hours_worked, completion_count):
+        """Generate contextual evening motivation"""
+        if hours_worked >= 6 and completion_count >= 2:
+            return "🏆 Exceptional day! You're absolutely crushing your goals!"
+        elif hours_worked >= 4 and completion_count >= 1:
+            return "💪 Outstanding progress! This is how success is built."
+        elif hours_worked >= 3 or completion_count >= 1:
+            return "📈 Solid day of progress! Consistency leads to big victories."
+        elif hours_worked >= 1:
+            return "🌱 Every step forward counts! Small progress beats no progress."
+        else:
+            return "🔄 Tomorrow is a new opportunity! Fresh start, fresh energy."
+    
+    # ========================================
+    # WEEKLY SUMMARY
+    # ========================================
+    
+    def weekly_summary(self):
+        """Generate comprehensive weekly summary"""
+        now = datetime.now()
+        week_start = now - timedelta(days=now.weekday())
+        week_end = week_start + timedelta(days=6)
+        
+        print("\n" + "=" * 70)
+        print(f"📊 WEEKLY SUMMARY REPORT")
+        print(f"📅 Week of {week_start.strftime('%B %d')} - {week_end.strftime('%B %d, %Y')}")
+        print("=" * 70)
+        
+        # Calculate weekly statistics
+        weekly_stats = self._calculate_weekly_stats()
+        
+        # Key achievements
+        print(f"\n🏆 WEEK'S ACHIEVEMENTS:")
+        print("-" * 35)
+        if weekly_stats["achievements"]:
+            for achievement in weekly_stats["achievements"]:
+                print(f"   🎉 {achievement}")
+        else:
+            print("   📝 Focus on documenting wins as you achieve them!")
+        
+        # Metrics dashboard
+        print(f"\n📈 WEEKLY METRICS:")
+        print("-" * 25)
+        print(f"   Hours Logged: {weekly_stats['total_hours']:.1f}h")
+        print(f"   Daily Average: {weekly_stats['avg_daily_hours']:.1f}h")
+        print(f"   Work Days: {weekly_stats['active_days']}")
+        print(f"   Tasks Completed: {weekly_stats['tasks_completed']}")
+        print(f"   Priorities Finished: {weekly_stats['priorities_completed']}")
+        
+        # Progress visualization
+        progress_viz = self._generate_weekly_progress_chart()
+        print(f"\n📊 PROGRESS VISUALIZATION:")
+        print("-" * 35)
+        print(progress_viz)
+        
+        # Weekly velocity trend
+        velocity_trend = self._analyze_velocity_trend()
+        print(f"\n📈 VELOCITY ANALYSIS:")
+        print("-" * 25)
+        for trend in velocity_trend:
+            print(f"   {trend}")
+        
+        # Risk assessment
+        risks = self._assess_weekly_risks()
+        if risks:
+            print(f"\n⚠️ ATTENTION NEEDED:")
+            print("-" * 25)
+            for risk in risks:
+                print(f"   ⚠️ {risk}")
+        else:
+            print(f"\n✅ NO MAJOR RISKS IDENTIFIED")
+            print("   🚀 Project is on track!")
+        
+        # Next week strategic plan
+        next_week_plan = self._create_strategic_next_week_plan()
+        print(f"\n🎯 NEXT WEEK STRATEGY:")
+        print("-" * 30)
+        for strategy_item in next_week_plan:
+            print(f"   {strategy_item}")
+        
+        # Executive summary (stakeholder ready)
+        exec_summary = self._generate_executive_summary(weekly_stats)
+        print(f"\n💼 EXECUTIVE SUMMARY (Stakeholder Ready):")
+        print("-" * 50)
+        print(exec_summary)
+        
+        print("\n" + "=" * 70)
+        print("📧 Executive Summary is ready for copy-paste to stakeholders!")
+        print("🔄 Weekly insights help optimize your development process.")
+        print("=" * 70)
+        print()
+    
+    def _calculate_weekly_stats(self):
+        """Calculate comprehensive weekly statistics"""
+        now = datetime.now()
+        week_ago = now - timedelta(days=7)
+        
+        # Filter logs from last 7 days
+        weekly_logs = [
+            log for log in self.progress_data.get("daily_logs", [])
+            if datetime.fromisoformat(log["date"]) >= week_ago
+        ]
+        
+        # Calculate metrics
+        total_hours = sum(log.get("hours", 0) for log in weekly_logs if log.get("action") == "hours_added")
+        
+        # Count unique work days
+        work_dates = set()
+        for log in weekly_logs:
+            if log.get("action") == "hours_added" and log.get("hours", 0) > 0:
+                work_dates.add(log["date"][:10])
+        
+        active_days = len(work_dates)
+        avg_daily_hours = (total_hours / active_days) if active_days > 0 else 0
+        
+        # Count completions
+        tasks_completed = len([log for log in weekly_logs if log.get("action") == "priority_completed"])
+        
+        # Count completed priorities
+        priorities_completed = len([
+            p for p in self.progress_data.get("current_priorities", [])
+            if p.get("status") == "completed" and 
+               p.get("completion_date", "")[:10] in [log["date"][:10] for log in weekly_logs]
+        ])
+        
+        # Generate achievements
+        achievements = []
+        if total_hours >= 20:
+            achievements.append(f"Logged {total_hours:.1f} hours - excellent dedication!")
+        if tasks_completed >= 3:
+            achievements.append(f"Completed {tasks_completed} major tasks")
+        if avg_daily_hours >= 4:
+            achievements.append(f"Maintained {avg_daily_hours:.1f}

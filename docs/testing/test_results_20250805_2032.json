@@ -1,0 +1,78 @@
+{
+  "timestamp": "2025-08-05T20:32:30.793398",
+  "backend_health": {},
+  "database": {},
+  "authentication": {},
+  "api_endpoints": {},
+  "websocket": {},
+  "games": {},
+  "multiplayer": {},
+  "performance": {},
+  "summary": {},
+  "beta_readiness": {
+    "user_registration": {
+      "status": "FAIL",
+      "step": "login",
+      "code": 404
+    },
+    "game_availability": {
+      "status": "PASS",
+      "games_count": 4,
+      "games": [
+        {
+          "id": "pong",
+          "name": "Pong Demo",
+          "description": "Simple Pong game simulation",
+          "status": "available",
+          "maxPlayers": 2,
+          "isMultiplayer": true,
+          "category": "arcade",
+          "difficulty": 1
+        },
+        {
+          "id": "snake",
+          "name": "Snake Game",
+          "description": "Classic Snake game built in React",
+          "status": "available",
+          "maxPlayers": 4,
+          "isMultiplayer": true,
+          "category": "arcade",
+          "difficulty": 2
+        },
+        {
+          "id": "memory",
+          "name": "Memory Game",
+          "description": "Test your memory with cards",
+          "status": "available",
+          "maxPlayers": 1,
+          "isMultiplayer": false,
+          "category": "puzzle",
+          "difficulty": 2
+        },
+        {
+          "id": "tetris",
+          "name": "Tetris Demo",
+          "description": "Tetris-style block game",
+          "status": "available",
+          "maxPlayers": 2,
+          "isMultiplayer": true,
+          "category": "puzzle",
+          "difficulty": 3
+        }
+      ]
+    },
+    "leaderboard_function": {
+      "status": "PASS",
+      "entries_count": 0,
+      "has_scores": false
+    },
+    "session_management": {
+      "status": "PASS",
+      "endpoint_exists": true
+    },
+    "error_handling": {
+      "status": "PASS",
+      "handles_404": true
+    }
+  }
+}

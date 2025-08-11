@@ -1,0 +1,9 @@
+2025-08-07 20:29:19,544 - INFO - Starting monitoring loop...
+2025-08-07 20:29:21,839 - ERROR - Connection error (attempt 1): Cannot connect to host localhost:3001 ssl:default [Der Remotecomputer hat die Netzwerkverbindung abgelehnt]
+2025-08-07 20:29:21,840 - ERROR - Socket.IO connection failed: Cannot connect to host localhost:3001 ssl:default [Der Remotecomputer hat die Netzwerkverbindung abgelehnt]
+2025-08-07 20:29:24,138 - ERROR - Failed to fetch server health: Cannot connect to host localhost:3001 ssl:default [Der Remotecomputer hat die Netzwerkverbindung abgelehnt]
+2025-08-07 20:29:26,433 - ERROR - Failed to fetch database status: Cannot connect to host localhost:3001 ssl:default [Der Remotecomputer hat die Netzwerkverbindung abgelehnt]
+2025-08-07 20:29:33,736 - ERROR - Failed to fetch server health: Cannot connect to host localhost:3001 ssl:default [Der Remotecomputer hat die Netzwerkverbindung abgelehnt]
+2025-08-07 20:29:36,033 - ERROR - Failed to fetch database status: Cannot connect to host localhost:3001 ssl:default [Der Remotecomputer hat die Netzwerkverbindung abgelehnt]
+2025-08-07 20:29:43,328 - ERROR - Failed to fetch server health: Cannot connect to host localhost:3001 ssl:default [Der Remotecomputer hat die Netzwerkverbindung abgelehnt]
+2025-08-07 20:29:45,625 - ERROR - Failed to fetch database status: Cannot connect to host localhost:3001 ssl:default [Der Remotecomputer hat die Netzwerkverbindung abgelehnt]
