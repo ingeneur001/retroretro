@@ -1,19 +1,22 @@
+
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ModeProvider } from './hooks/useModeDetection';
 import { UserProvider } from './components/interfaces/user/UserManager';  
 import RetroArcadeHome from './components/core/RetroArcadeHome';
+// Import Theme Provider
+import { RetroThemeProvider } from './styles/ThemeProvider';
 import GamesZoneHub from './components/gameszone/GamesZoneHub';
 import SingleplayerZone from './components/gameszone/singleplayer/SingleplayerZone';
-
 // Import individual games
 import SnakeGame from './components/gameszone/singleplayer/SnakeGame';
 import TetrisGame from './components/gameszone/singleplayer/TetrisGame';
 import MemoryGame from './components/gameszone/singleplayer/MemoryGame';
 import PongGame from './components/gameszone/singleplayer/PongGame';
 import MultiplayerZone from './components/gameszone/multiplayer/MultiplayerZone';
-import PongMultiplayer from './components/gameszone/multiplayer/PongMultiplayer'; // 🆕 HINZUGEFÜGT
-
+import PongMultiplayer from './components/gameszone/multiplayer/PongMultiplayer';
+// Import Profile components
+import { UserManager } from './components/interfaces/user/UserManager';
 import './index.css';
 
 // Debug Wrapper Komponenten
@@ -43,11 +46,11 @@ const MemoryWrapper = () => {
   return <MemoryGame />;
 };
 
-// 🆕 PONG WRAPPER HINZUGEFÜGT
 const PongWrapper = () => {
   console.log('🏓 Route: /games/singleplayer/pong matched');
   return <PongGame />;
 };
+
 // Multiplayer Wrapper Komponenten
 const MultiplayerZoneWrapper = () => {
   console.log('👥 Route: /games/multiplayer matched');
@@ -59,30 +62,45 @@ const PongMultiplayerWrapper = () => {
   return <PongMultiplayer />;
 };
 
+// Profile Wrapper - NEU HINZUGEFÜGT
+const ProfileWrapper = () => {
+  console.log('👤 Route: /profile matched');
+  return <UserManager />;
+};
+
 function App() {
   console.log('🚀 App.tsx: Rendering with Router');
   
   return (
-    <ModeProvider>
-      <UserProvider> 
-        <Router>
-          <div className="App">
-            <Routes>
-              {/* Main Routes */}
-              <Route path="/" element={<RetroArcadeHome />} />
-              <Route path="/games" element={<GamesZoneWrapper />} />
-              <Route path="/games/singleplayer" element={<SingleplayerWrapper />} />
-            
-              {/* Individual Game Routes */}
-              <Route path="/games/singleplayer/snake" element={<SnakeWrapper />} />
-              <Route path="/games/singleplayer/tetris" element={<TetrisWrapper />} />
-              <Route path="/games/singleplayer/memory" element={<MemoryWrapper />} />
-              <Route path="/games/singleplayer/pong" element={<PongWrapper />} /> {/* 🆕 PONG ROUTE */}
-            </Routes>
-          </div>
-        </Router>
-      </UserProvider>
-    </ModeProvider>
+    <RetroThemeProvider>
+      <ModeProvider>
+        <UserProvider> 
+          <Router>
+            <div className="App">
+              <Routes>
+                {/* Main Routes */}
+                <Route path="/" element={<RetroArcadeHome />} />
+                <Route path="/games" element={<GamesZoneWrapper />} />
+                
+                {/* Profile Route - NEU HINZUGEFÜGT */}
+                <Route path="/profile" element={<ProfileWrapper />} />
+                
+                {/* Singleplayer Routes */}
+                <Route path="/games/singleplayer" element={<SingleplayerWrapper />} />
+                <Route path="/games/singleplayer/snake" element={<SnakeWrapper />} />
+                <Route path="/games/singleplayer/tetris" element={<TetrisWrapper />} />
+                <Route path="/games/singleplayer/memory" element={<MemoryWrapper />} />
+                <Route path="/games/singleplayer/pong" element={<PongWrapper />} />
+                
+                {/* Multiplayer Routes */}
+                <Route path="/games/multiplayer" element={<MultiplayerZoneWrapper />} />
+                <Route path="/games/multiplayer/pong" element={<PongMultiplayerWrapper />} />
+              </Routes>
+            </div>
+          </Router>
+        </UserProvider>
+      </ModeProvider>
+    </RetroThemeProvider>
   );
 }
 

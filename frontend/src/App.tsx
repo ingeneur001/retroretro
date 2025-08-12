@@ -75,7 +75,7 @@ function App() {
     <RetroThemeProvider>
       <ModeProvider>
         <UserProvider> 
-          <Router>
+          <Router basename="/retroretro">
             <div className="App">
               <Routes>
                 {/* Main Routes */}
