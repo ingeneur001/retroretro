@@ -1,0 +1,321 @@
+// src/components/interfaces/user/UserAuth.tsx
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  AppContainer,
+  PageHeader,
+  PageTitle,
+  ContentArea,
+  CenteredContent,
+  Card,
+  CardTitle,
+  CardContent,
+  Button,
+  FormContainer,
+  Input,
+  Label,
+  FlexColumn,
+  FlexRow,
+  Text,
+  Spacer
+} from '../../../styles/components';
+
+// User Interface - angepasst an UserManager-Struktur
+interface User {
+  id: string;
+  username: string;
+  email: string;
+  createdAt: Date;
+  stats: {
+    totalScore: number;
+    gamesPlayed: number;
+    favoriteGame: string;
+    highScores: Record<string, number>;
+    achievements: string[];
+  };
+  // Backwards compatibility - behalte die alten Properties als Getter
+  totalScore: number;
+  gamesPlayed: number;
+  favoriteGame: string;
+}
+
+interface UserAuthProps {
+  onLogin: (user: User) => void;
+  onLogout: () => void;
+  currentUser: User | null;
+}
+
+export const UserAuth: React.FC<UserAuthProps> = ({ onLogin, onLogout, currentUser }) => {
+  const navigate = useNavigate();
+  const [isLogin, setIsLogin] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    username: '',
+    email: '',
+    password: '',
+    confirmPassword: ''
+  });
+  const [error, setError] = useState('');
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (error) setError(''); // Clear error when user types
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    console.log("🔥 SUBMIT CLICKED!"); // <-- Das hier hinzufügen
+    e.preventDefault();
+    console.log("🔥 FORM DATA:", formData); // <-- Und das
+    setIsLoading(true);
+    setError('');
+
+    try {
+      if (!isLogin) {
+        // Registration validation
+        if (formData.password !== formData.confirmPassword) {
+          setError('Passwords do not match');
+          setIsLoading(false);
+          return;
+        }
+        if (formData.password.length < 3) {
+          setError('Password must be at least 3 characters');
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      const endpoint = isLogin ? 'login' : 'register';
+      const body = isLogin 
+        ? { username: formData.username, password: formData.password }
+        : { 
+            username: formData.username, 
+            email: formData.email, 
+            password: formData.password 
+          };
+
+      const response = await fetch(`http://localhost:3001/api/auth/${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Success - create user object mit stats-Struktur
+        const statsData = {
+          totalScore: data.user?.totalScore || 0,
+          gamesPlayed: data.user?.gamesPlayed || 0,
+          favoriteGame: data.user?.favoriteGame || 'none',
+          highScores: data.user?.highScores || {},
+          achievements: data.user?.achievements || []
+        };
+
+        const user: User = {
+          id: data.user?.id || Date.now().toString(),
+          username: formData.username,
+          email: formData.email || `${formData.username}@retro.game`,
+          createdAt: new Date(),
+          stats: statsData,
+          // Backwards compatibility
+          totalScore: statsData.totalScore,
+          gamesPlayed: statsData.gamesPlayed,
+          favoriteGame: statsData.favoriteGame
+        };
+        
+        onLogin(user);
+        console.log(`✅ ${isLogin ? 'Login' : 'Registration'} successful:`, user);
+      } else {
+        setError(data.message || `${isLogin ? 'Login' : 'Registration'} failed`);
+      }
+    } catch (err) {
+      console.error('Auth error:', err);
+      setError('Connection error. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleBackToHome = () => {
+    navigate('/');
+  };
+
+  const handleGuestMode = () => {
+    // Create a guest user mit stats-Struktur
+    const statsData = {
+      totalScore: 0,
+      gamesPlayed: 0,
+      favoriteGame: 'none',
+      highScores: {},
+      achievements: []
+    };
+
+    const guestUser: User = {
+      id: 'guest_' + Date.now(),
+      username: 'Guest Player',
+      email: 'guest@retro.game',
+      createdAt: new Date(),
+      stats: statsData,
+      // Backwards compatibility
+      totalScore: 0,
+      gamesPlayed: 0,
+      favoriteGame: 'none'
+    };
+    onLogin(guestUser);
+  };
+
+  const toggleMode = () => {
+    setIsLogin(!isLogin);
+    setError('');
+    setFormData({
+      username: '',
+      email: '',
+      password: '',
+      confirmPassword: ''
+    });
+  };
+
+  return (
+    <AppContainer>
+      <PageHeader>
+        <PageTitle>🔑 {isLogin ? 'Player Login' : 'Player Registration'}</PageTitle>
+        <FlexRow>
+          <Button variant="ghost" onClick={handleBackToHome}>
+            ← Back to Home
+          </Button>
+          <Button variant="secondary" onClick={handleGuestMode}>
+            🎮 Play as Guest
+          </Button>
+        </FlexRow>
+      </PageHeader>
+
+      <ContentArea>
+        <CenteredContent>
+          <Card style={{ maxWidth: '500px', width: '100%' }}>
+            <CardTitle>
+              {isLogin ? '🚀 Welcome Back, Player!' : '🎮 Join the Retro Gaming Community!'}
+            </CardTitle>
+            
+            <CardContent>
+              <FlexColumn>
+                <Text size="sm" color="#cccccc">
+                  {isLogin 
+                    ? 'Enter your credentials to access your gaming profile and high scores.'
+                    : 'Create an account to save your progress, track high scores, and compete on leaderboards!'
+                  }
+                </Text>
+
+                <Spacer size="md" />
+
+                <FormContainer onSubmit={handleSubmit}>
+                  <FlexColumn>
+                    <Label htmlFor="username">Username</Label>
+                    <Input
+                      id="username"
+                      name="username"
+                      type="text"
+                      placeholder="Enter your username"
+                      value={formData.username}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </FlexColumn>
+
+                  {!isLogin && (
+                    <FlexColumn>
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        placeholder="Enter your email"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </FlexColumn>
+                  )}
+
+                  <FlexColumn>
+                    <Label htmlFor="password">Password</Label>
+                    <Input
+                      id="password"
+                      name="password"
+                      type="password"
+                      placeholder="Enter your password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </FlexColumn>
+
+                  {!isLogin && (
+                    <FlexColumn>
+                      <Label htmlFor="confirmPassword">Confirm Password</Label>
+                      <Input
+                        id="confirmPassword"
+                        name="confirmPassword"
+                        type="password"
+                        placeholder="Confirm your password"
+                        value={formData.confirmPassword}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </FlexColumn>
+                  )}
+
+                  {error && (
+                    <Text size="sm" color="#ff6b6b">
+                      ⚠️ {error}
+                    </Text>
+                  )}
+
+                  <Spacer size="md" />
+
+                  <FlexColumn>
+                    <Button 
+                      type="submit" 
+                      variant="primary" 
+                      size="large" 
+                      fullWidth 
+                      disabled={isLoading}
+                    >
+                      {isLoading ? '⏳ Processing...' : isLogin ? '🚀 Login' : '✨ Create Account'}
+                    </Button>
+
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      onClick={toggleMode}
+                      disabled={isLoading}
+                    >
+                      {isLogin 
+                        ? "Don't have an account? Register here" 
+                        : 'Already have an account? Login here'
+                      }
+                    </Button>
+                  </FlexColumn>
+                </FormContainer>
+
+                <Spacer size="lg" />
+
+                <FlexColumn style={{ textAlign: 'center' }}>
+                  <Text size="xs" color="#888">
+                    🎮 RetroRetro Gaming Service
+                  </Text>
+                  <Text size="xs" color="#888">
+                    Play classic games • Track scores • Compete with friends
+                  </Text>
+                </FlexColumn>
+              </FlexColumn>
+            </CardContent>
+          </Card>
+        </CenteredContent>
+      </ContentArea>
+    </AppContainer>
+  );
+};
+
+// Exportiere auch den User-Type für andere Komponenten
+export type { User };

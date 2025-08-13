@@ -1,0 +1,415 @@
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useModeDetection } from '../../../hooks/useModeDetection';
+import { GameNavigation, GameNavigationPresets } from '../shared/GameNavigation';
+import styled, { css } from 'styled-components';
+
+// Styled Components
+const ZoneContainer = styled.div`
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+  color: white;
+  padding: 2rem;
+  font-family: 'Orbitron', monospace;
+`;
+
+const ZoneHeader = styled.div`
+  text-align: center;
+  margin-bottom: 3rem;
+`;
+
+const ZoneTitle = styled.h1`
+  font-size: 3rem;
+  background: linear-gradient(45deg, #00ffff, #ff00ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 1rem;
+  text-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+
+  @media (max-width: 768px) {
+    font-size: 2rem;
+  }
+`;
+
+const ZoneSubtitle = styled.p`
+  font-size: 1.2rem;
+  color: #b0b0b0;
+  max-width: 600px;
+  margin: 0 auto;
+`;
+
+const GamesGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 2rem;
+  max-width: 1200px;
+  margin: 0 auto 3rem auto;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    padding: 1rem;
+    gap: 1.5rem;
+  }
+`;
+
+// ✅ GEÄNDERT: Minimale Game Card - nur Icon + Titel mit Neon-Effekten
+const GameCard = styled.div<{ enabled: boolean }>`
+  background: rgba(0, 20, 40, 0.8);
+  border: 3px solid ${props => props.enabled ? '#00ffff' : '#666'};
+  border-radius: 15px;
+  padding: 2rem;
+  text-align: center;
+  cursor: ${props => props.enabled ? 'pointer' : 'not-allowed'};
+  transition: all 0.4s ease;
+  opacity: ${props => props.enabled ? 1 : 0.6};
+  position: relative;
+  overflow: hidden;
+  height: 200px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 1.5rem;
+  box-shadow: 0 0 15px ${props => props.enabled ? 'rgba(0, 255, 255, 0.2)' : 'rgba(102, 102, 102, 0.2)'};
+
+  ${props => props.enabled && css`
+    &:hover {
+      background: rgba(0, 20, 40, 0.95);
+      transform: translateY(-8px) scale(1.02);
+      border-color: #00ffff;
+      box-shadow: 
+        0 0 30px rgba(0, 255, 255, 0.7),
+        0 0 60px rgba(0, 255, 255, 0.5),
+        0 0 100px rgba(0, 255, 255, 0.3),
+        0 15px 35px rgba(0, 0, 0, 0.3);
+      
+      &::before {
+        opacity: 1;
+      }
+      
+      &::after {
+        opacity: 0.8;
+      }
+      
+      /* Icon Neon-Effekt */
+      ${GameIcon} {
+        filter: drop-shadow(0 0 15px #00ffff) 
+                drop-shadow(0 0 25px rgba(0, 255, 255, 0.7));
+        transform: scale(1.1);
+      }
+      
+      /* Title Neon-Effekt */
+      ${GameTitle} {
+        color: #00ffff;
+        text-shadow: 
+          0 0 15px #00ffff,
+          0 0 30px rgba(0, 255, 255, 0.7),
+          0 0 45px rgba(0, 255, 255, 0.5);
+        transform: scale(1.05);
+      }
+    }
+  `}
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg, 
+      rgba(0, 255, 255, 0.5), 
+      transparent, 
+      rgba(0, 255, 255, 0.5), 
+      transparent, 
+      rgba(0, 255, 255, 0.5)
+    );
+    border-radius: 15px;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at center, 
+      rgba(0, 255, 255, 0.1) 0%, 
+      transparent 70%
+    );
+    border-radius: 15px;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+  }
+`;
+
+const GameIcon = styled.div`
+  font-size: 4rem;
+  margin: 0;
+  filter: none;
+  transition: all 0.4s ease;
+`;
+
+const GameTitle = styled.h3<{ enabled: boolean }>`
+  font-size: 1.8rem;
+  margin: 0;
+  color: ${props => props.enabled ? '#00ffff' : '#666'};
+  text-shadow: ${props => props.enabled ? '0 0 10px rgba(0, 255, 255, 0.3)' : 'none'};
+  text-transform: uppercase;
+  letter-spacing: 0.1rem;
+  transition: all 0.4s ease;
+`;
+
+// ❌ ENTFERNT: GameDescription, PlayButton - nicht mehr benötigt
+
+const DemoNotice = styled.div`
+  background: rgba(255, 152, 0, 0.2);
+  border: 1px solid #ff9800;
+  border-radius: 10px;
+  padding: 1rem;
+  margin: 2rem auto;
+  text-align: center;
+  max-width: 600px;
+  
+  h3 {
+    color: #ff9800;
+    margin: 0 0 0.5rem 0;
+  }
+  
+  p {
+    margin: 0;
+    color: #ffcc80;
+  }
+`;
+
+const PremiumSection = styled.div`
+  margin-top: 4rem;
+`;
+
+const PremiumHeader = styled.div`
+  text-align: center;
+  margin-bottom: 2rem;
+  
+  h2 {
+    color: #ff9800;
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  p {
+    color: #ffcc80;
+    font-size: 1rem;
+    margin: 0;
+  }
+`;
+
+// ✅ GEÄNDERT: Premium Card mit rotem Neon-Effekt
+const PremiumGameCard = styled.div`
+  background: rgba(40, 0, 0, 0.8);
+  border: 3px solid #ff6b6b;
+  border-radius: 15px;
+  padding: 2rem;
+  text-align: center;
+  cursor: not-allowed;
+  transition: all 0.4s ease;
+  opacity: 0.7;
+  position: relative;
+  overflow: hidden;
+  height: 200px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 1.5rem;
+  box-shadow: 0 0 15px rgba(255, 107, 107, 0.2);
+
+  &:hover {
+    background: rgba(40, 0, 0, 0.95);
+    transform: translateY(-8px) scale(1.02);
+    border-color: #ff6b6b;
+    box-shadow: 
+      0 0 30px rgba(255, 107, 107, 0.7),
+      0 0 60px rgba(255, 107, 107, 0.5),
+      0 0 100px rgba(255, 107, 107, 0.3),
+      0 15px 35px rgba(0, 0, 0, 0.3);
+    
+    ${GameIcon} {
+      filter: drop-shadow(0 0 15px #ff6b6b) 
+              drop-shadow(0 0 25px rgba(255, 107, 107, 0.7));
+      transform: scale(1.1);
+    }
+    
+    ${PremiumTitle} {
+      color: #ff6b6b;
+      text-shadow: 
+        0 0 15px #ff6b6b,
+        0 0 30px rgba(255, 107, 107, 0.7),
+        0 0 45px rgba(255, 107, 107, 0.5);
+      transform: scale(1.05);
+    }
+  }
+`;
+
+const PremiumTitle = styled.h3`
+  font-size: 1.8rem;
+  margin: 0;
+  color: #ff6b6b;
+  text-shadow: 0 0 10px rgba(255, 107, 107, 0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.1rem;
+  transition: all 0.4s ease;
+`;
+
+// Game Data Interface
+interface GameData {
+  id: string;
+  title: string;
+  icon: string;
+  description: string;
+  path: string;
+  enabled: boolean;
+  requiresProduction?: boolean;
+}
+
+const SingleplayerZone: React.FC = () => {
+  const navigate = useNavigate();
+  const { mode } = useModeDetection();
+
+  // Game Configuration based on Mode
+  const singleplayerGames: GameData[] = [
+    {
+      id: 'snake',
+      title: 'Snake Game',
+      icon: '🐍',
+      description: 'Classic snake game - grow your snake by eating food while avoiding walls and yourself.',
+      path: '/games/singleplayer/snake',
+      enabled: true // Available in all modes
+    },
+    {
+      id: 'tetris',
+      title: 'Tetris',
+      icon: '🧩',
+      description: 'The legendary puzzle game - arrange falling blocks to clear lines and score points.',
+      path: '/games/singleplayer/tetris',
+      enabled: true // Available in all modes
+    },
+    {
+      id: 'memory',
+      title: 'Memory Game',
+      icon: '🧠',
+      description: 'Test your memory by matching pairs of cards in this classic concentration game.',
+      path: '/games/singleplayer/memory',
+      enabled: true
+    },
+    {
+      id: 'pong',
+      title: 'Pong Game',
+      icon: '🏓',
+      description: 'Classic pong game - control your paddle to hit the ball and score against the computer.',
+      path: '/games/singleplayer/pong',
+      enabled: true // Available in all modes
+    },
+    {
+      id: 'puzzle',
+      title: 'Puzzle Games',
+      icon: '🧩',
+      description: 'Collection of brain-teasing puzzle games including sliding puzzles and logic games.',
+      path: '/games/singleplayer/puzzle',
+      enabled: mode === 'production', // Production only
+      requiresProduction: true
+    },
+    {
+      id: 'quiz',
+      title: 'Quiz Games',
+      icon: '❓',
+      description: 'Challenge your knowledge with various quiz categories and difficulty levels.',
+      path: '/games/singleplayer/quiz',
+      enabled: mode === 'production', // Production only
+      requiresProduction: true
+    }
+  ];
+
+  const handleGameClick = (game: GameData) => {
+    if (game.enabled) {
+      console.log(`🎮 Starting ${game.title}`);
+      navigate(game.path);
+    } else {
+      console.log(`🚫 ${game.title} not available in ${mode} mode`);
+    }
+  };
+
+  const availableGames = singleplayerGames.filter(game => 
+    mode === 'production' || !game.requiresProduction
+  );
+
+  const disabledGames = singleplayerGames.filter(game => 
+    mode !== 'production' && game.requiresProduction
+  );
+
+  return (
+    <ZoneContainer>
+      {/* Zone Header */}
+      <ZoneHeader>
+        <ZoneTitle>🎲 SINGLEPLAYER ZONE</ZoneTitle>
+        <ZoneSubtitle>
+          Challenge yourself with classic single-player games. Perfect your skills and beat your high scores!
+        </ZoneSubtitle>
+      </ZoneHeader>
+
+      {/* ✅ GEÄNDERT: Minimale Available Games - nur Icon + Titel */}
+      <GamesGrid>
+        {availableGames.map(game => (
+          <GameCard
+            key={game.id}
+            enabled={game.enabled}
+            onClick={() => handleGameClick(game)}
+          >
+            <GameIcon>{game.icon}</GameIcon>
+            <GameTitle enabled={game.enabled}>{game.title}</GameTitle>
+          </GameCard>
+        ))}
+      </GamesGrid>
+
+      {/* ✅ GEÄNDERT: Minimale Disabled Games (Premium) - nur Icon + Titel mit rotem Neon */}
+      {disabledGames.length > 0 && (
+        <PremiumSection>
+          <PremiumHeader>
+            <h2>🔒 Premium Games</h2>
+            <p>Available in Production Mode</p>
+          </PremiumHeader>
+          
+          <GamesGrid>
+            {disabledGames.map(game => (
+              <PremiumGameCard key={game.id}>
+                <GameIcon>{game.icon}</GameIcon>
+                <PremiumTitle>{game.title}</PremiumTitle>
+              </PremiumGameCard>
+            ))}
+          </GamesGrid>
+        </PremiumSection>
+      )}
+
+      {/* Demo Mode Notice */}
+      {mode === 'demo' && (
+        <DemoNotice>
+          <h3>🚫 Demo Mode Limitations</h3>
+          <p>
+            Some games are not available in Demo Mode. 
+            Upgrade to Production Mode to access all singleplayer games and save your progress!
+          </p>
+        </DemoNotice>
+      )}
+
+      {/* Navigation */}
+      <GameNavigation {...GameNavigationPresets.gameZone('Singleplayer Zone')} />
+    </ZoneContainer>
+  );
+};
+
+export default SingleplayerZone;

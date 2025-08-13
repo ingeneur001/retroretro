@@ -1,0 +1,69 @@
+// frontend/src/types/multiplayer.ts
+export interface User {
+  id: string;
+  displayName: string;
+  username?: string;
+  email?: string;
+  avatar?: string;
+  playerNumber?: number;
+  isHost?: boolean;
+  socketId?: string;
+}
+
+export interface GameSession {
+  id: string;
+  gameType: string;
+  status: 'waiting' | 'playing' | 'finished';
+  hostUser: User;
+  players: User[];
+  spectators?: User[];
+  maxPlayers: number;
+  createdAt: Date;
+  settings?: GameSettings;
+}
+
+export interface GameSettings {
+  difficulty?: 'easy' | 'medium' | 'hard';
+  gameMode?: string;
+  timeLimit?: number;
+  [key: string]: any;
+}
+
+export interface ChatMessage {
+  id: string;
+  type: 'system' | 'user';
+  message: string;
+  user?: User;
+  timestamp: Date;
+}
+
+export interface MultiplayerState {
+  isConnected: boolean;
+  currentSession: GameSession | null;
+  availableSessions: GameSession[];
+  sessionPlayers: User[];
+  sessionSpectators: User[];
+  chatMessages: ChatMessage[];
+  connectionError: string | null;
+}
+
+// Socket Event Types
+export interface SocketEvents {
+  // Client to Server
+  'join-session': (sessionId: string) => void;
+  'leave-session': () => void;
+  'create-session': (gameType: string, settings?: GameSettings) => void;
+  'send-chat': (message: string) => void;
+  'start-game': () => void;
+  
+  // Server to Client
+  'session-joined': (session: GameSession) => void;
+  'session-left': () => void;
+  'session-created': (session: GameSession) => void;
+  'player-joined': (user: User) => void;
+  'player-left': (userId: string) => void;
+  'chat-message': (message: ChatMessage) => void;
+  'game-started': (gameData: any) => void;
+  'sessions-updated': (sessions: GameSession[]) => void;
+  'error': (error: string) => void;
+}
