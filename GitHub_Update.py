@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """
-GitHub Update Script für RetroRetro Projekt
+GitHub Update Script für RetroRetro Projekt (ERWEITERT)
 Verwaltet Fullstack→Frontend-only Deployment:
 1. Entwicklung (Fullstack): D:/Claude_Scripte/RetroRetro/legal-retro-gaming-service
 2. GitHub Pages (Frontend): C:/Users/w_wae/retroretro
 Extrahiert automatisch nur Frontend-Dateien und bereinigt Backend-Dependencies.
+NEU: Intelligente React Router Konfiguration für GitHub Pages!
 """
 
 import subprocess
@@ -12,6 +13,7 @@ import os
 import sys
 import json
 import shutil
+import re
 from pathlib import Path
 
 class DualRepoUpdater:
@@ -74,6 +76,137 @@ class DualRepoUpdater:
         print(f"📍 Aktuelles Repository: {self.current_repo}")
         return True
     
+    def create_intelligent_app_tsx(self):
+        """Erstellt intelligente App.tsx mit automatischer Umgebungserkennung für Router"""
+        app_tsx_path = self.github_repo / "src" / "App.tsx"
+        
+        if not app_tsx_path.exists():
+            print("⚠️ App.tsx nicht im GitHub-Repository gefunden")
+            return
+        
+        try:
+            with open(app_tsx_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            # Prüfe ob schon intelligente Erkennung vorhanden ist
+            if 'getBasename' in content and 'window.location.hostname' in content:
+                print("✅ Intelligente Router-Konfiguration bereits vorhanden")
+                return
+            
+            # Backup erstellen
+            backup_path = app_tsx_path.with_suffix('.tsx.backup')
+            with open(backup_path, 'w', encoding='utf-8') as f:
+                f.write(content)
+            print(f"📋 Backup erstellt: {backup_path}")
+            
+            # Intelligente Router-Logik hinzufügen
+            self._inject_intelligent_router_logic(content, app_tsx_path)
+            
+        except Exception as e:
+            print(f"❌ Fehler bei intelligenter App.tsx Erstellung: {e}")
+    
+    def _inject_intelligent_router_logic(self, content, app_tsx_path):
+        """Injiziert intelligente Router-Logik in App.tsx"""
+        lines = content.split('\n')
+        new_lines = []
+        router_injection_done = False
+        function_start_found = False
+        
+        for i, line in enumerate(lines):
+            new_lines.append(line)
+            
+            # Finde function App() { Zeile
+            if 'function App()' in line and '{' in line and not function_start_found:
+                function_start_found = True
+                
+                # Finde die nächste Zeile mit console.log oder return
+                next_executable_line_index = None
+                for j in range(i + 1, len(lines)):
+                    stripped = lines[j].strip()
+                    if stripped and not stripped.startswith('//') and not stripped.startswith('/*'):
+                        next_executable_line_index = j
+                        break
+                
+                if next_executable_line_index:
+                    # Füge die intelligente Logik vor der ersten ausführbaren Zeile hinzu
+                    indent = '  '  # Standard React Indentation
+                    
+                    intelligent_code = f'''
+{indent}// 🎯 Intelligente Umgebungserkennung für Router basename
+{indent}const getBasename = () => {{
+{indent}  // Development: localhost oder lokale IPs  
+{indent}  if (
+{indent}    window.location.hostname === 'localhost' ||
+{indent}    window.location.hostname === '127.0.0.1' ||
+{indent}    window.location.hostname.startsWith('192.168.') ||
+{indent}    window.location.hostname.startsWith('10.') ||
+{indent}    window.location.hostname.startsWith('172.')
+{indent}  ) {{
+{indent}    console.log('🔧 Development Mode: Router basename = "/"');
+{indent}    return '/';
+{indent}  }}
+{indent}  
+{indent}  // GitHub Pages: ingeneur001.github.io
+{indent}  if (window.location.hostname.includes('github.io')) {{
+{indent}    console.log('🚀 GitHub Pages Mode: Router basename = "/retroretro"');
+{indent}    return '/retroretro';
+{indent}  }}
+{indent}  
+{indent}  // Fallback für andere Production-Umgebungen
+{indent}  console.log('🌐 Production Mode: Router basename = "/retroretro"');
+{indent}  return '/retroretro';
+{indent}}};
+
+{indent}const basename = getBasename();
+'''
+                    
+                    # Füge den Code vor der nächsten ausführbaren Zeile hinzu
+                    new_lines.insert(next_executable_line_index, intelligent_code)
+                    router_injection_done = True
+                    break
+        
+        if not router_injection_done:
+            print("⚠️ Konnte intelligente Router-Logik nicht automatisch einfügen")
+            return
+        
+        # Jetzt Router-Zeile finden und basename hinzufügen
+        final_content = '\n'.join(new_lines)
+        
+        # Suche nach Router ohne basename oder mit festem basename
+        router_patterns = [
+            r'<Router>',
+            r'<Router\s+basename=["\'][^"\']*["\']>',
+            r'<BrowserRouter>',
+            r'<BrowserRouter\s+basename=["\'][^"\']*["\']>'
+        ]
+        
+        for pattern in router_patterns:
+            if re.search(pattern, final_content):
+                # Ersetze durch Router mit dynamischem basename
+                final_content = re.sub(
+                    pattern,
+                    '<Router basename={basename}>',
+                    final_content
+                )
+                print("🔧 Router-Tag mit dynamischem basename aktualisiert")
+                break
+        
+        # Falls BrowserRouter verwendet wird, auch das ersetzen
+        final_content = re.sub(
+            r'<BrowserRouter(\s+basename=\{[^}]+\})?>',
+            '<Router basename={basename}>',
+            final_content
+        )
+        
+        # Speichere die modifizierte Datei
+        with open(app_tsx_path, 'w', encoding='utf-8') as f:
+            f.write(final_content)
+        
+        print("✅ Intelligente Router-Konfiguration erfolgreich hinzugefügt")
+        print("   🔧 Development: Router verwendet basename='/'")
+        print("   🚀 GitHub Pages: Router verwendet basename='/retroretro'")
+        print("   🌐 Production: Router verwendet basename='/retroretro'")
+    
     def sync_repositories(self):
         """Synchronisiert NUR Frontend von Entwicklung zu GitHub (Backend-bereinigt)"""
         if self.current_repo == "dev":
@@ -121,7 +254,12 @@ class DualRepoUpdater:
                 # 3. Frontend-only .gitignore erstellen
                 self.create_frontend_gitignore()
                 
-                # 4. Backend-Referenzen in Code entfernen (falls vorhanden)
+                # 4. NEU: Intelligente Router-Konfiguration hinzufügen
+                print("\n🎯 ROUTER-REPARATUR FÜR GITHUB PAGES")
+                print("-" * 40)
+                self.create_intelligent_app_tsx()
+                
+                # 5. Backend-Referenzen in Code entfernen (falls vorhanden)
                 self.remove_backend_references()
                 
                 print("✅ Frontend-Synchronisation abgeschlossen")
@@ -239,6 +377,10 @@ yarn-error.log*
 # Temporary folders
 tmp/
 temp/
+
+# Router backup files
+*.tsx.backup
+*.jsx.backup
 """
         
         try:
@@ -250,9 +392,49 @@ temp/
     
     def remove_backend_references(self):
         """Entfernt Backend-Referenzen aus Frontend-Code (optional)"""
-        # Hier könnten Sie Code hinzufügen, der Backend-URLs in Frontend-Dateien 
-        # durch GitHub Pages-kompatible URLs ersetzt
-        print("ℹ️  Backend-Referenzen überprüft (keine Änderungen nötig)")
+        # Suche nach Backend-URLs und ersetze sie für GitHub Pages
+        src_path = self.github_repo / "src"
+        if not src_path.exists():
+            print("ℹ️  Kein src-Ordner gefunden für Backend-Referenz-Check")
+            return
+        
+        print("🔍 Überprüfe Backend-Referenzen...")
+        
+        # Muster für Backend-URLs
+        backend_patterns = [
+            r'http://localhost:8000',
+            r'http://127\.0\.0\.1:8000',
+            r'/api/',
+            r'ws://localhost:8000',
+            r'ws://127\.0\.0\.1:8000'
+        ]
+        
+        files_checked = 0
+        files_modified = 0
+        
+        # Durchsuche alle TypeScript/JavaScript Dateien
+        for file_path in src_path.rglob('*.{ts,tsx,js,jsx}'):
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                
+                files_checked += 1
+                original_content = content
+                
+                # Suche nach Backend-Referenzen (nur warnen, nicht automatisch ändern)
+                for pattern in backend_patterns:
+                    if re.search(pattern, content):
+                        print(f"⚠️  Backend-Referenz gefunden in: {file_path.relative_to(self.github_repo)}")
+                        print(f"   Pattern: {pattern}")
+                
+            except Exception as e:
+                print(f"⚠️  Fehler beim Überprüfen von {file_path}: {e}")
+        
+        if files_modified > 0:
+            print(f"✅ {files_modified} Dateien modifiziert, {files_checked} Dateien überprüft")
+        else:
+            print(f"ℹ️  {files_checked} Dateien überprüft, keine automatischen Änderungen vorgenommen")
+        print("   Hinweis: Backend-URLs müssen manuell für Production angepasst werden")
     
     def check_package_json(self, repo_path):
         """Überprüft package.json für GitHub Pages Konfiguration"""
@@ -448,7 +630,7 @@ temp/
         print("2. Mit folgendem Inhalt:")
         print()
         
-        workflow_content = """name: Deploy to GitHub Pages
+        workflow_content = """name: Deploy RetroRetro to GitHub Pages
 
 on:
   push:
@@ -470,7 +652,7 @@ jobs:
     - name: Install dependencies
       run: npm install
     
-    - name: Build
+    - name: Build RetroRetro
       run: npm run build
     
     - name: Deploy to GitHub Pages
@@ -535,8 +717,11 @@ jobs:
     
     def run_full_update(self, build_dev=True, sync_repos=True, final_dev_build=False):
         """Führt den kompletten Update-Prozess aus"""
-        print("🎮 RetroRetro Dual-Repository Update Script")
-        print("=" * 60)
+        print("🎮 RetroRetro Dual-Repository Update Script (ERWEITERT)")
+        print("=" * 65)
+        print("🆕 NEU: Automatische React Router Reparatur für GitHub Pages!")
+        print("🔧 Development bleibt unverändert, GitHub Pages funktioniert!")
+        print("=" * 65)
         
         # Schritt 1: Repository-Struktur überprüfen
         if not self.check_repositories():
@@ -584,7 +769,7 @@ jobs:
             print("⚠️  GitHub Pages Setup fehlgeschlagen")
         
         # Git-Operationen für GitHub-Repo
-        self.git_operations(self.github_repo, "Production build and deployment")
+        self.git_operations(self.github_repo, "Production build with intelligent router")
         
         # GitHub Actions Deployment (automatisch)
         print("\n🤖 GITHUB ACTIONS DEPLOYMENT")
@@ -622,20 +807,29 @@ jobs:
         print("   ✅ GitHub-Repository gebaut")
         print("   ✅ Zu GitHub Pages deployed")
         print("   ✅ Git-Repositories aktualisiert")
+        print("   🆕 Intelligente Router-Konfiguration hinzugefügt")
         if final_dev_build:
             print("   ✅ Finaler Entwicklungs-Build")
         
+        print("\n🎯 NEUE FEATURES:")
+        print("   🔧 Development: localhost → Router basename='/'")
+        print("   🚀 GitHub Pages: github.io → Router basename='/retroretro'")
+        print("   🌐 Production: Automatische Erkennung")
+        print("   🔄 Kein manueller Eingriff mehr nötig!")
+        
         print("\n💡 Fullstack → Frontend-only Konvertierung:")
         print("   - Nur Frontend-Dateien kopiert")
-        print("   - Backend-Dependencies entfernt")
+        print("   - Backend-Dependencies entfernt") 
         print("   - package.json für GitHub Pages angepasst")
         print("   - Frontend-spezifische .gitignore erstellt")
+        print("   - Intelligente Router-Konfiguration")
         
         print("\n🔧 Nächste Schritte:")
         print("   - Warten Sie 2-5 Minuten für GitHub Pages Update")
         print("   - Leeren Sie den Browser-Cache (Ctrl+F5)")
         print("   - Entwickeln Sie weiter im Fullstack-Repository")
         print("   - Backend läuft weiter lokal für Entwicklung")
+        print("   - Router funktioniert automatisch in beiden Umgebungen!")
         
         return True
 
@@ -644,7 +838,7 @@ def main():
     import argparse
     
     parser = argparse.ArgumentParser(
-        description="Dual-Repository GitHub Update Script für RetroRetro"
+        description="Dual-Repository GitHub Update Script für RetroRetro (ERWEITERT)"
     )
     parser.add_argument("--no-dev-build", action="store_true",
                        help="Überspringe Build im Entwicklungs-Repository")
@@ -654,12 +848,22 @@ def main():
                        help="Nur GitHub-Repository bearbeiten")
     parser.add_argument("--final-dev-build", action="store_true",
                        help="Finalen Entwicklungs-Build ausführen (normalerweise unnötig)")
+    parser.add_argument("--router-fix-only", action="store_true",
+                       help="Nur Router-Reparatur ausführen (für Debugging)")
     
     args = parser.parse_args()
     
     updater = DualRepoUpdater()
     
     try:
+        # Spezielle Option für nur Router-Reparatur
+        if args.router_fix_only:
+            print("🎯 Nur Router-Reparatur Modus")
+            print("-" * 30)
+            if updater.check_repositories():
+                updater.create_intelligent_app_tsx()
+            sys.exit(0)
+        
         build_dev = not (args.no_dev_build or args.github_only)
         sync_repos = not (args.no_sync or args.github_only)
         final_dev_build = args.final_dev_build
