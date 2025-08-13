@@ -49,3 +49,7 @@ yarn-error.log*
 # Temporary folders
 tmp/
 temp/
+
+# Router backup files
+*.tsx.backup
+*.jsx.backup
