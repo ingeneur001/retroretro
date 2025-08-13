@@ -269,6 +269,16 @@ const ZoneCard = styled.div.withConfig({
   `}
 `;
 
+// Falls ZoneTitle auch kleiner werden soll:
+const ZoneTitle = styled.h2`
+  font-size: 1.3rem;             /* ✅ REDUZIERT: war vermutlich 1.5rem */
+  margin: 0;
+  transition: all 0.4s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.1rem;
+  /* Alle anderen Title-Styles bleiben gleich */
+`;
+
 const ZoneTitle = styled.h3.withConfig({
   shouldForwardProp: (prop) => !['enabled', 'zoneColor'].includes(prop),
 })<{ enabled: boolean; zoneColor: string }>`

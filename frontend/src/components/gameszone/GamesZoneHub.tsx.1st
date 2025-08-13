@@ -196,7 +196,7 @@ const NavButton = styled.button.withConfig({
 
 const ZoneGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
   gap: 2rem;
   padding: 2rem;
   max-width: 1200px;
@@ -209,86 +209,128 @@ const ZoneGrid = styled.div`
   }
 `;
 
-// ✅ GEÄNDERT: Minimale Card mit Neon-Effekt
 const ZoneCard = styled.div.withConfig({
   shouldForwardProp: (prop) => !['enabled', 'zoneColor'].includes(prop),
 })<{ enabled: boolean; zoneColor: string }>`
   background: rgba(0, 20, 40, 0.8);
   border: 3px solid ${props => props.enabled ? props.zoneColor : '#666'};
   border-radius: 15px;
-  padding: 1.5rem;               /* ✅ REDUZIERT: war 2rem */
+  padding: 2rem;
   text-align: center;
   cursor: ${props => props.enabled ? 'pointer' : 'not-allowed'};
-  transition: all 0.4s ease;
+  transition: all 0.3s ease;
   opacity: ${props => props.enabled ? 1 : 0.6};
   position: relative;
   overflow: hidden;
-  height: 160px;                 /* ✅ REDUZIERT: war 200px */
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  gap: 1rem;                     /* ✅ REDUZIERT: war 1.5rem */
-  box-shadow: 0 0 15px ${props => props.enabled ? `${props.zoneColor}33` : 'rgba(102, 102, 102, 0.2)'};
+
   ${props => props.enabled && css`
     &:hover {
-      background: rgba(0, 20, 40, 0.95);
-      transform: translateY(-8px) scale(1.02);
+      transform: translateY(-10px);
+      box-shadow: 0 15px 30px ${props.zoneColor}66;
       border-color: ${props.zoneColor};
-      box-shadow: 
-        0 0 30px ${props.zoneColor}aa,
-        0 0 60px ${props.zoneColor}77,
-        0 0 100px ${props.zoneColor}44,
-        0 15px 35px rgba(0, 0, 0, 0.3);
-      
-      &::before {
-        opacity: 1;
-      }
-      
-      &::after {
-        opacity: 0.8;
-      }
-      
-      /* Icon Neon-Effekt */
-      ${ZoneIcon} {
-        filter: drop-shadow(0 0 15px ${props.zoneColor}) 
-                drop-shadow(0 0 25px ${props.zoneColor}aa);
-        transform: scale(1.1);
-      }
-      
-      /* Title Neon-Effekt */
-      ${ZoneTitle} {
-        color: ${props.zoneColor};
-        text-shadow: 
-          0 0 15px ${props.zoneColor},
-          0 0 30px ${props.zoneColor}aa,
-          0 0 45px ${props.zoneColor}77;
-        transform: scale(1.05);
-      }
     }
   `}
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, ${props => props.zoneColor}22, transparent);
+    transition: left 0.6s ease;
+  }
+
+  ${props => props.enabled && css`
+    &:hover::before {
+      left: 100%;
+    }
+  `}
+`;
+
+const ZoneIcon = styled.div`
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  filter: ${props => 'none'};
 `;
 
 const ZoneTitle = styled.h3.withConfig({
   shouldForwardProp: (prop) => !['enabled', 'zoneColor'].includes(prop),
 })<{ enabled: boolean; zoneColor: string }>`
-  font-size: 1.3rem;  // ✅ NUR DIESE ZEILE GEÄNDERT
-  margin: 0;
+  font-size: 1.8rem;
+  margin-bottom: 1rem;
   color: ${props => props.enabled ? props.zoneColor : '#666'};
-  text-shadow: ${props => props.enabled ? `0 0 10px ${props.zoneColor}55` : 'none'};
+  text-shadow: ${props => props.enabled ? `0 0 10px ${props.zoneColor}` : 'none'};
   text-transform: uppercase;
   letter-spacing: 0.1rem;
-  transition: all 0.4s ease;
 `;
 
-// Nach der ZoneTitle Komponente hinzufügen:
-const ZoneIcon = styled.div.withConfig({
+const ZoneDescription = styled.p.withConfig({
+  shouldForwardProp: (prop) => !['enabled'].includes(prop),
+})<{ enabled: boolean }>`
+  font-size: 1rem;
+  margin-bottom: 1.5rem;
+  color: ${props => props.enabled ? '#fff' : '#999'};
+  line-height: 1.4;
+`;
+
+const ZoneStatus = styled.div.withConfig({
+  shouldForwardProp: (prop) => !['enabled', 'isDemo'].includes(prop),
+})<{ enabled: boolean; isDemo: boolean }>`
+  font-size: 0.9rem;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  margin-bottom: 1rem;
+  background: ${props => {
+    if (!props.enabled) return 'rgba(255, 0, 0, 0.2)';
+    if (props.isDemo) return 'rgba(255, 255, 0, 0.2)';
+    return 'rgba(0, 255, 0, 0.2)';
+  }};
+  color: ${props => {
+    if (!props.enabled) return '#ff6666';
+    if (props.isDemo) return '#ffff66';
+    return '#66ff66';
+  }};
+  border: 1px solid ${props => {
+    if (!props.enabled) return '#ff6666';
+    if (props.isDemo) return '#ffff66';
+    return '#66ff66';
+  }};
+  font-weight: bold;
+  text-transform: uppercase;
+`;
+
+const EnterButton = styled.button.withConfig({
   shouldForwardProp: (prop) => !['enabled', 'zoneColor'].includes(prop),
 })<{ enabled: boolean; zoneColor: string }>`
-  font-size: 3rem;               /* ✅ Kleiner: war vermutlich 4rem */
-  margin: 0;
-  filter: ${props => 'none'};
-  transition: all 0.4s ease;
+  background: ${props => props.enabled ? 
+    `linear-gradient(45deg, ${props.zoneColor}, ${props.zoneColor}cc)` : 
+    'linear-gradient(45deg, #333, #666)'
+  };
+  color: ${props => props.enabled ? '#000' : '#999'};
+  border: none;
+  padding: 1rem 2rem;
+  font-size: 1.1rem;
+  font-weight: bold;
+  border-radius: 8px;
+  cursor: ${props => props.enabled ? 'pointer' : 'not-allowed'};
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  position: relative;
+  z-index: 1;
+
+  ${props => props.enabled && css`
+    &:hover {
+      transform: scale(1.05);
+      box-shadow: 0 5px 15px ${props.zoneColor}66;
+    }
+
+    &:active {
+      transform: scale(0.95);
+    }
+  `}
 `;
 
 const ContentArea = styled.div`
@@ -304,21 +346,17 @@ const ContentArea = styled.div`
   }
 `;
 
-// In GamesZoneHub.tsx - ServerStatus Breite anpassen:
 const ServerStatus = styled.div`
   background: rgba(0, 0, 0, 0.9);
-  border: 4px solid #00ff00;  // oder welche Farbe auch immer
+  border: 4px solid #00ffff;
   border-radius: 15px;
   padding: 2rem;
-  width: 100%;                    
-  max-width: 700px;              // ✅ Gleiche Breite wie andere Zonen
-  box-shadow: 
-    0 0 20px rgba(0, 255, 0, 0.5),
-    0 0 40px rgba(0, 255, 0, 0.3);
-  // ... rest der Styles
+  min-width: 400px;
+  animation: ${boxColorChange} 3s infinite;
 
   @media (max-width: 768px) {
-    width: 90%;                   
+    min-width: auto;
+    width: 100%;
     max-width: 500px;
   }
 `;
@@ -480,7 +518,7 @@ const GamesZoneHub: React.FC = () => {
         </NavButton>
       </Navigation>
 
-      {/* ✅ GEÄNDERT: Minimale 3-Zonen Grid - nur Icon + Titel mit Neon-Effekt */}
+      {/* 3-Zonen Grid */}
       <ZoneGrid>
         {gameZones.map((zone) => (
           <ZoneCard
@@ -489,12 +527,27 @@ const GamesZoneHub: React.FC = () => {
             zoneColor={zone.color}
             onClick={() => handleZoneClick(zone)}
           >
-            <ZoneIcon enabled={zone.enabled} zoneColor={zone.color}>
-              {zone.icon}
-            </ZoneIcon>
+            <ZoneIcon>{zone.icon}</ZoneIcon>
             <ZoneTitle enabled={zone.enabled} zoneColor={zone.color}>
               {zone.title}
             </ZoneTitle>
+            <ZoneStatus enabled={zone.enabled} isDemo={mode === 'demo'}>
+              {zone.status} • {zone.gameCount} Games
+            </ZoneStatus>
+            <ZoneDescription enabled={zone.enabled}>
+              {zone.description}
+            </ZoneDescription>
+
+            <EnterButton
+              enabled={zone.enabled}
+              zoneColor={zone.color}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleZoneClick(zone);
+              }}
+            >
+              {zone.enabled ? 'Enter Zone' : 'Restricted'}
+            </EnterButton>
           </ZoneCard>
         ))}
       </ZoneGrid>

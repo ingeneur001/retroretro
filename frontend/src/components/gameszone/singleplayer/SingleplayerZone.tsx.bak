@@ -209,17 +209,6 @@ const PremiumHeader = styled.div`
   }
 `;
 
-// ✅ GEÄNDERT: PremiumTitle ZUERST definieren
-const PremiumTitle = styled.h3`
-  font-size: 1.8rem;
-  margin: 0;
-  color: #ff6b6b;
-  text-shadow: 0 0 10px rgba(255, 107, 107, 0.3);
-  text-transform: uppercase;
-  letter-spacing: 0.1rem;
-  transition: all 0.4s ease;
-`;
-
 // ✅ GEÄNDERT: Premium Card mit rotem Neon-Effekt
 const PremiumGameCard = styled.div`
   background: rgba(40, 0, 0, 0.8);
@@ -265,6 +254,16 @@ const PremiumGameCard = styled.div`
       transform: scale(1.05);
     }
   }
+`;
+
+const PremiumTitle = styled.h3`
+  font-size: 1.8rem;
+  margin: 0;
+  color: #ff6b6b;
+  text-shadow: 0 0 10px rgba(255, 107, 107, 0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.1rem;
+  transition: all 0.4s ease;
 `;
 
 // Game Data Interface
