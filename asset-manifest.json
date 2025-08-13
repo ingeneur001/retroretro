@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/retroretro/static/css/main.e6c13ad2.css",
+    "main.js": "/retroretro/static/js/main.36b62984.js",
+    "index.html": "/retroretro/index.html",
+    "main.e6c13ad2.css.map": "/retroretro/static/css/main.e6c13ad2.css.map",
+    "main.36b62984.js.map": "/retroretro/static/js/main.36b62984.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.e6c13ad2.css",
+    "static/js/main.36b62984.js"
+  ]
+}
